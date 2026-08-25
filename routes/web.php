@@ -104,7 +104,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('locations', \App\Http\Controllers\LocationController::class);
     });
 
-    Route::middleware('role:Admin,Warehouse Manager')->group(function () {
+    Route::middleware('role:Warehouse Manager')->group(function () {
         Route::resource('users', \App\Http\Controllers\UserController::class);
     });
 });

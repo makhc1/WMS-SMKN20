@@ -14,8 +14,11 @@ const navigation = [
     // Only Admin and Warehouse Manager can access these
     ...( ['Admin', 'Warehouse Manager'].includes(userRole) ? [
         { name: 'Lokasi Gudang', route: 'locations.index', icon: PhMapPin },
-        { name: 'Manajemen Pengguna', route: 'users.index', icon: PhUser },
         { name: 'Laporan', route: 'reports.index', icon: PhFileText },
+    ] : []),
+    // Only Warehouse Manager can manage users
+    ...( userRole === 'Warehouse Manager' ? [
+        { name: 'Manajemen Pengguna', route: 'users.index', icon: PhUser },
     ] : [])
 ];
 

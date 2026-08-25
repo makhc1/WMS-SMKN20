@@ -35,11 +35,21 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
+        $user = $request->user();
+        $allowedRoles = ['Staff Picker'];
+
+        if ($user->role === 'Admin') {
+            $allowedRoles[] = 'Admin';
+            $allowedRoles[] = 'Warehouse Manager';
+        } elseif ($user->role === 'Warehouse Manager') {
+            $allowedRoles[] = 'Warehouse Manager';
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'role' => 'required|string|in:Admin,Warehouse Manager,Staff Picker',
+            'role' => 'required|string|in:' . implode(',', $allowedRoles),
             'status' => 'required|string|in:Active,Suspended',
         ]);
 
@@ -59,10 +69,20 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        $currentUser = $request->user();
+        $allowedRoles = ['Staff Picker'];
+
+        if ($currentUser->role === 'Admin') {
+            $allowedRoles[] = 'Admin';
+            $allowedRoles[] = 'Warehouse Manager';
+        } elseif ($currentUser->role === 'Warehouse Manager') {
+            $allowedRoles[] = 'Warehouse Manager';
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
-            'role' => 'required|string|in:Admin,Warehouse Manager,Staff Picker',
+            'role' => 'required|string|in:' . implode(',', $allowedRoles),
             'status' => 'required|string|in:Active,Suspended',
         ]);
 

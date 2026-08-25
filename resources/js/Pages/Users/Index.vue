@@ -148,13 +148,12 @@ const deleteUser = (id) => {
                                     <Link 
                                         v-if="link.url"
                                         :href="link.url" 
-                                        v-html="link.label"
                                         :class="[
                                             link.active ? 'bg-terracotta-600 text-white font-semibold' : 'text-gray-600 hover:bg-black/5 hover:text-black',
                                             'relative inline-flex items-center px-6 py-4 text-sm rounded-full transition-all duration-300'
                                         ]"
-                                    />
-                                    <span v-else v-html="link.label" class="relative inline-flex items-center px-6 py-4 text-sm font-medium text-gray-400 cursor-not-allowed"></span>
+                                    >{{ link.label }}</Link>
+                                    <span v-else class="relative inline-flex items-center px-6 py-4 text-sm font-medium text-gray-400 cursor-not-allowed">{{ link.label }}</span>
                                 </template>
                             </nav>
                         </div>

@@ -15,6 +15,8 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call(UserSeeder::class);
+
         // Dummy Items for SMKN 20
         $dummyItems = [
             ['name' => 'Kertas HVS A4 80gr', 'category' => 'ATK', 'sku' => 'ATK-001', 'brand' => 'PaperOne', 'location' => 'Rak A1', 'low_stock_threshold' => 10],
