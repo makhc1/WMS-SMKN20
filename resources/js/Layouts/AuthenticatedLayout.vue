@@ -1,7 +1,7 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import { PhHouse, PhCube, PhArrowDownLeft, PhArrowUpRight, PhSignOut, PhList, PhX, PhBell, PhWarningCircle, PhFileText, PhUser, PhMapPin } from '@phosphor-icons/vue';
+import { PhHouse, PhCube, PhArrowDownLeft, PhArrowUpRight, PhSignOut, PhList, PhX, PhBell, PhWarningCircle, PhFileText, PhUser, PhMapPin, PhClock, PhWrench } from '@phosphor-icons/vue';
 
 const page = usePage();
 const userRole = page.props.auth.user.role;
@@ -11,19 +11,47 @@ const navigation = [
     { name: 'Master Barang', route: 'items.index', icon: PhCube },
     { name: 'Inbound', route: 'inbound.index', icon: PhArrowDownLeft },
     { name: 'Outbound', route: 'outbound.index', icon: PhArrowUpRight },
+    { name: 'Riwayat', route: 'riwayat.index', icon: PhClock },
     // Only Admin and Warehouse Manager can access these
     ...( ['Admin', 'Warehouse Manager'].includes(userRole) ? [
-        { name: 'Lokasi Gudang', route: 'locations.index', icon: PhMapPin },
+        { name: 'Lokasi Rak', route: 'locations.index', icon: PhMapPin },
         { name: 'Laporan', route: 'reports.index', icon: PhFileText },
     ] : []),
-    // Only Warehouse Manager can manage users
+    // Only Warehouse Manager can manage users & maintenance
     ...( userRole === 'Warehouse Manager' ? [
         { name: 'Manajemen Pengguna', route: 'users.index', icon: PhUser },
+        { name: 'Mode Pemeliharaan', route: 'maintenance.index', icon: PhWrench },
     ] : [])
 ];
 
 const mobileMenuOpen = ref(false);
 const showNotifications = ref(false);
+
+// Auto-detect when Maintenance Mode starts in real-time
+let maintenanceHeartbeat = null;
+
+onMounted(() => {
+    if (userRole !== 'Warehouse Manager') {
+        maintenanceHeartbeat = setInterval(async () => {
+            try {
+                const res = await fetch(route('system.status'), {
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.maintenance) {
+                        if (maintenanceHeartbeat) clearInterval(maintenanceHeartbeat);
+                        window.location.reload();
+                    }
+                }
+            } catch (e) {}
+        }, 5000);
+    }
+});
+
+onUnmounted(() => {
+    if (maintenanceHeartbeat) clearInterval(maintenanceHeartbeat);
+});
 </script>
 
 <template>
@@ -186,9 +214,31 @@ const showNotifications = ref(false);
         <main class="flex-1 md:ml-[328px] flex flex-col min-h-[100dvh] pt-28 md:pt-16 px-6 md:pr-12 md:pl-0 pb-32">
             
             <div class="w-full max-w-[1400px] mx-auto">
+                <!-- Maintenance Active Alert Banner (Visible when maintenance mode is ON) -->
+                <div 
+                    v-if="$page.props.systemMaintenance && $page.props.systemMaintenance.is_active" 
+                    class="mb-8 p-4 sm:p-5 rounded-2xl bg-amber-500 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg shadow-amber-500/20 animate-[fadeDown_0.6s_cubic-bezier(0.32,0.72,0,1)_forwards]"
+                >
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                            <PhWrench class="w-5 h-5 text-white" weight="bold" />
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold tracking-tight">Mode Pemeliharaan Sedang Aktif</p>
+                            <p class="text-xs text-white/80">Sistem terkunci untuk staf dan publik. Hanya Anda (Warehouse Manager) yang memiliki akses.</p>
+                        </div>
+                    </div>
+                    <Link 
+                        :href="route('maintenance.index')" 
+                        class="self-start sm:self-auto text-xs font-bold bg-white text-black px-5 py-2 rounded-full hover:bg-gray-100 transition-all hover:scale-105 active:scale-95 shadow-sm whitespace-nowrap"
+                    >
+                        Kelola Status
+                    </Link>
+                </div>
+
                 <!-- Header Area -->
-                <div class="mb-12 md:mb-16 animate-[fadeUp_1s_cubic-bezier(0.32,0.72,0,1)_forwards]">
-                    <h1 class="text-4xl tracking-tighter leading-none md:text-5xl lg:text-6xl font-bold tracking-tighter text-black">
+                <div class="mb-8 md:mb-12 animate-[fadeUp_1s_cubic-bezier(0.32,0.72,0,1)_forwards]">
+                    <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-black leading-tight">
                         <slot name="header" />
                     </h1>
                 </div>

@@ -40,6 +40,9 @@ class HandleInertiaRequests extends Middleware
                 }
                 return [];
             },
+            'systemMaintenance' => function () {
+                return \App\Models\SystemSetting::getMaintenanceDetails();
+            },
         ];
     }
 }

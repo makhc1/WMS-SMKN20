@@ -16,8 +16,8 @@ class ItemController extends Controller
         if ($request->has('search')) {
             $search = $request->string('search');
             $query->where(function ($q) use ($search) {
-                $q->where('sku', 'like', "%{$search}%")
-                  ->orWhere('name', 'like', "%{$search}%");
+                $q->where('sku', 'like', '%' . $search . '%')
+                  ->orWhere('name', 'like', '%' . $search . '%');
             });
         }
 
@@ -27,7 +27,7 @@ class ItemController extends Controller
 
         $items = $query->orderBy('name')->paginate(10)->withQueryString();
 
-        $categories = Item::select('category')->distinct()->whereNotNull('category')->pluck('category');
+        $categories = Item::select('category')->distinct()->whereNotNull('category')->whereNull('deleted_at')->pluck('category');
 
         return Inertia::render('Items/Index', [
             'items' => $items,
@@ -115,14 +115,12 @@ class ItemController extends Controller
     public function destroy(Item $item)
     {
         if ($item->quantity > 0) {
-            return redirect()->route('items.index')->withErrors(['error' => 'Tidak dapat menghapus barang yang masih memiliki stok.']);
-        }
-        
-        if ($item->photo) {
-            Storage::disk('public')->delete($item->photo);
+            return back()->withErrors([
+                'error' => 'Tidak dapat menghapus barang "' . $item->name . '" karena masih memiliki stok (' . $item->quantity . ' ' . ($item->unit ?: 'Pcs') . '). Kurangi stok menjadi 0 terlebih dahulu.'
+            ]);
         }
 
         $item->delete();
-        return redirect()->route('items.index')->with('message', 'Barang berhasil dihapus.');
+        return redirect()->route('items.index')->with('success', 'Barang "' . $item->name . '" berhasil diarsipkan.');
     }
 }

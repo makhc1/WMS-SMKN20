@@ -119,31 +119,4 @@ const printBarcode = () => {
             </div>
         </div>
     </AuthenticatedLayout>
-
-    <!-- Custom styles for printing to only show the barcode and hide everything else -->
-    <style>
-        @media print {
-            body * {
-                visibility: hidden;
-            }
-            .print\:shadow-none {
-                box-shadow: none !important;
-            }
-            .print\:border-none {
-                border: none !important;
-            }
-            .print\:p-0 {
-                padding: 0 !important;
-            }
-            .print\:hidden {
-                display: none !important;
-            }
-            .inline-block svg {
-                visibility: visible;
-                position: absolute;
-                left: 0;
-                top: 0;
-            }
-        }
-    </style>
 </template>

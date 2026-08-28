@@ -1,128 +1,232 @@
-# Security Audit Report — Post-Fix Scan
+# Security Audit Report - WMS SMKN 20
+
+**Tanggal:** 27 Agustus 2026  
+**Scope:** Full-stack Laravel + Vue.js (Inertia) application  
+**Severity:** Critical / High / Medium / Low
+
+---
 
 ## Executive Summary
 
-Second audit performed after applying 8 security fixes. **All previous HIGH and MEDIUM findings have been resolved.** The codebase is now in a much stronger security posture. One new informational finding was identified.
-
-**Overall Assessment:** Low Risk — production-ready with minor hardening recommended.
+Website WMS SMKN 20 memiliki beberapa masalah keamanan yang perlu diperhatikan. Yang paling kritis adalah **`.env` file yang sudah di-commit ke git** (berisi APP_KEY), serta beberapa celah pada **otorisasi** dan **input validation**.
 
 ---
 
-## Previous Findings — Status
+## CRITICAL
 
-| ID | Severity | Finding | Status |
-|---|---|---|---|
-| SEC-001 | High | CSP `unsafe-inline` for scripts | **FIXED** |
-| SEC-002 | High | `v-html` in pagination (10 occurrences) | **FIXED** |
-| SEC-003 | High | No `SESSION_SECURE_COOKIE` config | **FIXED** |
-| SEC-004 | Medium | `APP_DEBUG=true` | **FIXED** |
-| SEC-005 | Medium | Weak password in seeder | **FIXED** |
-| SEC-006 | Medium | Mass assignment of `role` field | **FIXED** |
-| SEC-008 | Low | `SESSION_ENCRYPT=false` | **FIXED** |
-| SEC-010 | Low | Deprecated `X-XSS-Protection` header | **FIXED** |
+### [C1] .env File Berisi APP_KEY Sudah di-Commit ke Git
 
----
+**Severity:** Critical  
+**Location:** `.env:3`, `.env.example:3`
 
-## New Findings
+**Evidence:**
+```
+APP_KEY=base64:RYPsYasfprMf/EyY2bROdA3QUX7TA7IT5GKhtVOuNpI=
+```
 
-### INFORMATIONAL — 2
+**Impact:** APP_KEY digunakan untuk enkripsi session, cookie, dan data sensitif lainnya. Jika bocor, attacker bisa:
+- Decrypt session cookies
+- Forge session cookies
+- Akses akun manapun termasuk admin
 
-#### SEC-013: Inline Style Binding with String Concatenation
-
-- **Severity:** Informational (Low)
-- **Location:** `resources/js/Pages/Locations/Index.vue:99`
-- **Evidence:**
-  ```vue
-  :style="{ width: loc.capacity_percentage + '%' }"
-  ```
-- **Impact:** The `capacity_percentage` is a numeric value from the database. String concatenation here is safe because the value is typed and controlled. No XSS vector.
-- **Fix:** None required. This is a safe pattern for dynamic CSS with numeric values.
-- **False positive notes:** False positive — value is always numeric from Eloquent integer column.
+**Fix:**
+1. **Rotate APP_KEY sekarang:**
+   ```bash
+   php artisan key:generate
+   ```
+2. **Remove .env dari git history:**
+   ```bash
+   git rm --cached .env
+   git commit -m "Remove .env from tracking"
+   ```
+3. **Add to .gitignore** (sudah ada, tapi sudah terlambat)
 
 ---
 
-#### SEC-014: No Content-Security-Policy Report-URI
+## HIGH
 
-- **Severity:** Informational (Low)
-- **Location:** `app/Http/Middleware/SecurityHeaders.php:24`
-- **Evidence:** CSP header does not include `report-uri` or `report-to` directive.
-- **Impact:** CSP violations won't be reported, making it harder to detect XSS attempts or misconfigurations in production.
-- **Fix:** Add `report-uri` directive when a monitoring endpoint is available.
-- **Mitigation:** CSP is properly enforced in production mode.
+### [H1] SQL Injection pada Query Search
+
+**Severity:** High  
+**Location:**
+- `ItemController.php:19-21`
+- `UserController.php:19-20`
+- `RiwayatController.php:14-16`
+
+**Evidence:**
+```php
+$q->where('sku', 'like', "%{$search}%")
+  ->orWhere('name', 'like', "%{$search}%");
+```
+
+**Impact:** Meskipun Laravel Query Builder secara otomatis menggunakan prepared statements, penggunaan `%{$search}%` tetap berisiko jika search term mengandung wildcard characters yang bisa dimanfaatkan.
+
+**Fix:** Gunakan parameter binding:
+```php
+$q->where('sku', 'like', '%' . $search . '%')
+  ->orWhere('name', 'like', '%' . $search . '%');
+```
 
 ---
 
-## Verification Summary
+### [H2] Missing Authorization Check pada Beberapa Controller
 
-### ✅ CSP Security
-- `script-src 'self'` — no `unsafe-inline` or `unsafe-eval`
-- `style-src 'self' 'unsafe-inline'` — acceptable for Tailwind CSS
-- CSP only applied in production environment
+**Severity:** High  
+**Location:**
+- `InboundTransactionController.php:15-26` (index)
+- `OutboundTransactionController.php:16-32` (index)
+- `RiwayatController.php:12` (index)
 
-### ✅ XSS Prevention
-- Zero `v-html` usage remaining
-- Zero `innerHTML` / `insertAdjacentHTML` / `document.write` usage
-- All user input validated server-side via Laravel `$request->validate()`
+**Impact:** Semua user yang login bisa mengakses data transaksi, termasuk user dengan role "Staff Picker" yang seharusnya tidak perlu melihat semua data.
 
-### ✅ Session Security
-- `SESSION_ENCRYPT=true` — session data encrypted at rest
-- `SESSION_HTTP_ONLY=true` — cookie inaccessible to JavaScript
-- `SESSION_SAME_SITE=lax` — CSRF protection via SameSite attribute
-- `SESSION_SECURE_COOKIE=false` — appropriate for local dev; enable for HTTPS production
+**Fix:** Tambahkan middleware role check:
+```php
+public function __construct()
+{
+    $this->middleware('role:Admin,Warehouse Manager')->only(['index', 'destroy']);
+}
+```
 
-### ✅ Authentication & Authorization
-- Role-based middleware on all privileged routes
-- Password reset throttle: 60 seconds
-- Bcrypt rounds: 12
-- User management restricted to Warehouse Manager role
-- Role assignment restricted based on current user's role
+---
 
-### ✅ Input Validation
-- All 15 controllers use `$request->validate()` with strict rules
-- No raw query building (`DB::raw`, `selectRaw`) detected
-- No SQL injection vectors found
+### [H3] Mass Assignment pada User Creation
 
-### ✅ Secrets Management
-- `.env` in `.gitignore` ✅
-- `APP_KEY` present and properly formatted
-- No secrets in frontend bundles (`VITE_` prefix only used for `APP_NAME`)
-- No `localStorage` / `sessionStorage` usage for sensitive data
+**Severity:** High  
+**Location:** `UserController.php:58`
 
-### ✅ Navigation Security
-- No open redirect patterns (`route.query.next`, `return_to`)
-- No `window.location` assignments from untrusted sources
-- No `javascript:` URLs detected
-- No `target="_blank"` without `rel="noopener"`
+**Evidence:**
+```php
+User::create($validated);
+```
+
+**Impact:** Jika attacker bisa manipulate request, mereka mungkin bisa inject field tambahan seperti `email_verified_at` atau field lain yang tidak seharusnya di-set.
+
+**Fix:** Gunakan `$request->only()` atau `$request->except()` untuk filter field:
+```php
+User::create($request->only(['name', 'email', 'password', 'role', 'status']));
+```
+
+---
+
+## MEDIUM
+
+### [M1] SESSION_SECURE_COOKIE=false
+
+**Severity:** Medium  
+**Location:** `.env:35`
+
+**Evidence:**
+```
+SESSION_SECURE_COOKIE=false
+```
+
+**Impact:** Session cookies akan dikirim melalui HTTP (tidak hanya HTTPS), memungkinkan session hijacking melalui network sniffing.
+
+**Fix:** Untuk production, set:
+```
+SESSION_SECURE_COOKIE=true
+```
+
+---
+
+### [M2] Missing Rate Limiting pada Auth Endpoints
+
+**Severity:** Medium  
+**Location:** `routes/web.php`
+
+**Impact:** Tidak ada rate limiting pada login attempt, memungkinkan brute force attack.
+
+**Fix:** Tambahkan throttle middleware:
+```php
+Route::post('/login', [AuthenticatedSessionController::class, 'store'])
+    ->middleware('throttle:5,1');
+```
+
+---
+
+### [H4] User Bisa Delete Diri Sendiri (Race Condition)
+
+**Severity:** Medium  
+**Location:** `UserController.php:101-110`
+
+**Evidence:**
+```php
+public function destroy(User $user)
+{
+    if (auth()->id() === $user->id) {
+        return redirect()->route('users.index')->withErrors([...]);
+    }
+    $user->delete();
+}
+```
+
+**Impact:** Meskipun ada pengecekan, ini hanya di level application. Jika ada race condition atau bypass, user bisa menghapus diri sendiri.
+
+**Fix:** Tambahkan constraint di database:
+```php
+Schema::table('users', function (Blueprint $table) {
+    $table->unique('id');
+});
+```
+
+---
+
+## LOW
+
+### [L1] Missing Security Headers (Non-Production)
+
+**Severity:** Low  
+**Location:** `SecurityHeaders.php:23`
+
+**Evidence:**
+```php
+if (app()->environment('production')) {
+    $response->headers->set('Content-Security-Policy', "...");
+}
+```
+
+**Impact:** Security headers hanya aktif di production, development environment tidak terlindungi.
+
+**Fix:** Aktifkan security headers untuk semua environment (kecuali CSP yang mungkin perlu dikecualikan untuk dev).
+
+---
+
+### [L2] Database Credentials为空
+
+**Severity:** Low  
+**Location:** `.env:28`
+
+**Evidence:**
+```
+DB_PASSWORD=
+```
+
+**Impact:** MySQL root user tanpa password - berbahaya jika database port ter-expose ke network.
+
+**Fix:** Set password untuk database user:
+```
+DB_PASSWORD=your_secure_password
+```
+
+---
+
+## Summary
+
+| Severity | Count | Status |
+|----------|-------|--------|
+| Critical | 1 | Perlu segera fix |
+| High | 3 | Perlu segera fix |
+| Medium | 3 | Perlu diperbaiki |
+| Low | 2 | Nice to have |
 
 ---
 
 ## Recommendations
 
-**For production deployment:**
-
-1. **Enable `SESSION_SECURE_COOKIE=true`** when deploying over HTTPS
-2. **Set `APP_DEBUG=false`** in production (already done)
-3. **Add CSP reporting** (`report-uri`) for monitoring
-4. **Consider disabling registration** (`/register`) if only admin-created accounts are needed
-5. **Rotate `APP_KEY`** periodically
+1. **Immediate:** Rotate APP_KEY dan hapus .env dari git history
+2. **Short-term:** Tambahkan authorization checks dan rate limiting
+3. **Long-term:** Implementasi security audit logging dan monitoring
 
 ---
 
-## Score
-
-| Category | Score |
-|---|---|
-| XSS Prevention | 9/10 |
-| CSRF Protection | 8/10 |
-| Session Security | 9/10 |
-| Authentication | 8/10 |
-| Authorization | 9/10 |
-| Input Validation | 9/10 |
-| Secrets Management | 8/10 |
-| **Overall** | **8.6/10** |
-
----
-
-*Report generated: 2026-08-25*
-*Audit scope: Full codebase security review*
-*Previous fixes verified: 8/8 confirmed*
+*Report generated by security-best-practices skill*

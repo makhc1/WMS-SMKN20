@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Item extends Model
 {
+    use SoftDeletes;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -17,7 +20,6 @@ class Item extends Model
         'category',
         'brand',
         'quantity',
-        'location',
         'receipt_date',
         'origin',
         'low_stock_threshold',
@@ -35,5 +37,19 @@ class Item extends Model
     public function outbounds()
     {
         return $this->hasMany(OutboundTransaction::class);
+    }
+
+    public function locations()
+    {
+        return $this->belongsToMany(Location::class, 'item_location')
+            ->withPivot('quantity')
+            ->withTimestamps();
+    }
+
+    public function pickingLists()
+    {
+        return $this->belongsToMany(PickingList::class, 'picking_list_item')
+            ->withPivot('quantity', 'location_id', 'status')
+            ->withTimestamps();
     }
 }

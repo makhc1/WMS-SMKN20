@@ -7,6 +7,14 @@ use Inertia\Inertia;
 
 Route::redirect('/', '/login');
 
+Route::get('/system-status', function () {
+    $details = \App\Models\SystemSetting::getMaintenanceDetails();
+    return response()->json([
+        'maintenance' => (bool) $details['is_active'],
+        'details' => $details,
+    ]);
+})->name('system.status');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', function () {
         $lowStock = \App\Models\Item::whereColumn('quantity', '<=', 'low_stock_threshold')->get();
@@ -87,8 +95,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ]);
     })->name('dashboard');
 
+    // Admin & Warehouse Manager bisa full CRUD (termasuk create, store, edit, update, delete)
+    Route::middleware('role:Admin,Warehouse Manager')->group(function () {
+        Route::resource('items', \App\Http\Controllers\ItemController::class)->except(['index', 'show']);
+    });
+
     Route::resource('items', \App\Http\Controllers\ItemController::class)->only(['index', 'show']);
-    Route::resource('items', \App\Http\Controllers\ItemController::class)->except(['index', 'show'])->middleware('role:Admin,Warehouse Manager');
     
     Route::resource('inbound', \App\Http\Controllers\InboundTransactionController::class);
     Route::post('inbound/{id}/complete', [\App\Http\Controllers\InboundTransactionController::class, 'markAsCompleted'])->name('inbound.complete');
@@ -96,16 +108,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('outbound', \App\Http\Controllers\OutboundTransactionController::class);
     Route::post('outbound/{id}/complete', [\App\Http\Controllers\OutboundTransactionController::class, 'markAsCompleted'])->name('outbound.complete');
 
+    Route::get('/riwayat', [\App\Http\Controllers\RiwayatController::class, 'index'])->name('riwayat.index');
+
+    Route::resource('picking-lists', \App\Http\Controllers\PickingListController::class)->except(['edit', 'update', 'destroy']);
+    Route::post('picking-lists/{id}/complete', [\App\Http\Controllers\PickingListController::class, 'markAsCompleted'])->name('picking-lists.complete');
+    Route::post('picking-lists/{id}/pick', [\App\Http\Controllers\PickingListController::class, 'markItemPicked'])->name('picking-lists.pick');
+
     Route::middleware('role:Admin,Warehouse Manager')->group(function () {
         Route::get('/reports', [\App\Http\Controllers\ReportController::class, 'index'])->name('reports.index');
         Route::post('/reports/stock/pdf', [\App\Http\Controllers\ReportController::class, 'exportStock'])->name('reports.stock.pdf');
         Route::post('/reports/mutations/pdf', [\App\Http\Controllers\ReportController::class, 'exportMutations'])->name('reports.mutations.pdf');
         
         Route::resource('locations', \App\Http\Controllers\LocationController::class);
+        Route::get('locations/{id}/items', [\App\Http\Controllers\LocationController::class, 'items'])->name('locations.items');
     });
 
     Route::middleware('role:Warehouse Manager')->group(function () {
         Route::resource('users', \App\Http\Controllers\UserController::class);
+        Route::get('/maintenance-settings', [\App\Http\Controllers\MaintenanceController::class, 'index'])->name('maintenance.index');
+        Route::post('/maintenance-settings', [\App\Http\Controllers\MaintenanceController::class, 'update'])->name('maintenance.update');
     });
 });
 

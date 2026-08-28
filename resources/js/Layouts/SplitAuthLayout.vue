@@ -89,7 +89,7 @@ onUnmounted(() => {
                         <div class="w-12 h-12 rounded-full border-2 border-[#0a0a0a] bg-emerald-700 flex items-center justify-center text-sm font-bold text-white shadow-lg">MK</div>
                     </div>
                     <div class="text-sm font-medium text-gray-400">
-                        Bergabung dengan <span class="text-white">Tim Logistik</span> SMKN 20.
+                        Bergabung dengan <span class="text-white">Manajemen Logistik</span> SMKN 20.
                     </div>
                 </div>
             </div>

@@ -1,56 +1,121 @@
-## Task 1: Setup Database & Models
-**Description:** Membuat skema database untuk merekam lokasi gudang dan data barang/paket yang di-scan.
+# Task List: Warehouse Manager Maintenance Mode
+
+## Task 1: Database Migration & Model for System Settings
+**Description:** Buat migrasi tabel `system_settings` dengan struktur key-value dan Model `SystemSetting`.
+
 **Acceptance criteria:**
-- [ ] Tabel `locations` (id, name, code) terbuat.
-- [ ] Tabel `items` (id, tracking_number, status, location_id, timestamps) terbuat.
-- [ ] Model Eloquent untuk Item dan Location siap digunakan.
+- [ ] Tabel `system_settings` memiliki kolom: `key` (unique, string), `value` (longtext/json nullable), timestamps.
+- [ ] Model `App\Models\SystemSetting` dibuat dengan method helper `get($key, $default)` dan `set($key, $value)`.
+
 **Verification:**
-- [ ] Tests pass: `php artisan migrate` berjalan tanpa error.
-- [ ] Manual check: Tabel terlihat di phpMyAdmin/HeidiSQL Laragon.
+- [ ] Run migration: `php artisan migrate`
+- [ ] Unit test create & retrieve setting value
+
 **Dependencies:** None
-**Files likely touched:** `database/migrations/*`, `app/Models/*`
-**Estimated scope:** Small
+**Files touched:**
+- `database/migrations/xxxx_xx_xx_create_system_settings_table.php`
+- `app/Models/SystemSetting.php`
+**Estimated scope:** Small (2 files)
 
-## Task 2: Inbound Controller & UI (Physical Scanner)
-**Description:** Membuat halaman Inbound di mana operator bisa menembak resi menggunakan scanner fisik berulang kali.
+---
+
+## Task 2: Maintenance Mode Middleware
+**Description:** Buat middleware `CheckMaintenanceMode` untuk mencegat request pengguna saat maintenance aktif.
+
 **Acceptance criteria:**
-- [ ] Input field secara otomatis *focus* saat halaman dibuka.
-- [ ] Ketikan *enter* (dari scanner) otomatis menyimpan data ke DB via AJAX/Fetch API.
-- [ ] Mencegah *double submit* (debounce) dan memberi suara *beep* sukses.
+- [ ] Middleware memeriksa status `maintenance_mode` dari cache/database.
+- [ ] Mengizinkan akses jika: maintenance OFF, route login/logout, route healthcheck `up`, atau user memiliki `role === 'Warehouse Manager'`.
+- [ ] Me-render halaman `Maintenance` (status 503) untuk pengguna non-manager saat maintenance ON.
+
 **Verification:**
-- [ ] Manual check: Bisa scan 3 barang berturut-turut dengan cepat dan ketiganya masuk DB.
+- [ ] Daftarkan middleware di `bootstrap/app.php`
+- [ ] Test request dengan user non-manager mengembalikan 503
+
 **Dependencies:** Task 1
-**Files likely touched:** `routes/web.php`, `app/Http/Controllers/InboundController.php`, `resources/views/inbound.blade.php`
-**Estimated scope:** Medium
+**Files touched:**
+- `app/Http/Middleware/CheckMaintenanceMode.php`
+- `bootstrap/app.php`
+**Estimated scope:** Small (2 files)
 
-## Checkpoint 1: Inbound Works
-- [ ] Data tersimpan, *debounce* berfungsi. Review dengan user.
+---
 
-## Task 3: Outbound Controller & Picking List UI
-**Description:** Membuat halaman Outbound yang menampilkan daftar barang yang harus diambil (Picking List) dan memproses pengeluarannya.
+## Task 3: Backend Controller & Routes for Maintenance Settings
+**Description:** Buat controller dan endpoint bagi Warehouse Manager untuk mengubah status dan pesan pemeliharaan.
+
 **Acceptance criteria:**
-- [ ] Menampilkan daftar barang dengan status 'in_warehouse'.
-- [ ] Kolom input scanner untuk menembak barang yang diambil.
-- [ ] Barang yang berhasil di-scan statusnya berubah (misal 'picked') dan UI ter-update tanpa *reload* seluruh halaman (Alpine.js/Fetch).
+- [ ] Endpoint `GET /maintenance-settings` merender UI pengaturan pemeliharaan.
+- [ ] Endpoint `POST /maintenance-settings` memvalidasi input (`is_enabled`, `message`, `estimated_finish`) dan menyimpan ke database.
+- [ ] Route hanya bisa diakses oleh `role:Warehouse Manager`.
+
 **Verification:**
-- [ ] Manual check: Scan barcode, baris di Picking List otomatis tercoret/hilang.
+- [ ] Route list mencatat rute maintenance-settings
+- [ ] Test status code 200 untuk manager, 403 untuk non-manager
+
+**Dependencies:** Task 1, Task 2
+**Files touched:**
+- `app/Http/Controllers/MaintenanceController.php`
+- `routes/web.php`
+**Estimated scope:** Small (2 files)
+
+---
+
+## Checkpoint: Backend Foundation
+- [ ] Migrasi berhasil
+- [ ] Endpoint backend dan middleware berfungsi dengan otorisasi role
+
+---
+
+## Task 4: Maintenance View Page (Frontend)
+**Description:** Buat halaman tampilan pemeliharaan yang modern untuk pengguna umum.
+
+**Acceptance criteria:**
+- [ ] Halaman `resources/js/Pages/Maintenance.vue` menampilkan ilustrasi/ikon maintenance, pesan kustom, estimasi selesai, dan tombol "Login Warehouse Manager".
+- [ ] Desain konsisten dengan UI WMS SMKN 20 (terracotta theme, tipografi rapi, responsive).
+
+**Verification:**
+- [ ] `npm run build` sukses
+- [ ] Visual inspection saat maintenance aktif
+
 **Dependencies:** Task 2
-**Files likely touched:** `app/Http/Controllers/OutboundController.php`, `resources/views/outbound.blade.php`
-**Estimated scope:** Medium
+**Files touched:**
+- `resources/js/Pages/Maintenance.vue`
+**Estimated scope:** Small (1 file)
 
-## Checkpoint 2: Outbound Works
-- [ ] Alur gudang dari Inbound ke Outbound berjalan mulus menggunakan scanner fisik.
+---
 
-## Task 4: Integrasi Webcam Scanner (Fallback)
-**Description:** Menambahkan UI *viewfinder* kamera menggunakan `html5-qrcode` di halaman Inbound dan Outbound.
+## Task 5: Maintenance Settings UI & Manager Warning Banner
+**Description:** Buat halaman pengaturan pemeliharaan untuk Warehouse Manager dan tambahkan indikator/banner di sidebar & layout.
+
 **Acceptance criteria:**
-- [ ] Klik area viewfinder menyalakan kamera.
-- [ ] Berhasil scan dari kamera memicu fungsi *submit* yang sama dengan fungsi scanner fisik.
-**Verification:**
-- [ ] Manual check: Scan QR code/barcode di HP menggunakan webcam terdeteksi dan tersimpan ke sistem.
-**Dependencies:** Task 2, Task 3
-**Files likely touched:** `resources/views/inbound.blade.php`, `resources/views/outbound.blade.php`
-**Estimated scope:** Medium
+- [ ] Halaman `resources/js/Pages/Settings/Maintenance.vue` memiliki toggle switch ON/OFF, form pesan kustom, dan estimasi waktu.
+- [ ] Menu "Mode Pemeliharaan" muncul di sidebar khusus Warehouse Manager di `AuthenticatedLayout.vue`.
+- [ ] Floating Warning Banner merah/oranye muncul di atas layout jika maintenance mode sedang aktif.
 
-## Checkpoint 3: Complete
-- [ ] Kedua mode scanner berfungsi harmonis. Selesai.
+**Verification:**
+- [ ] Toggle switch mengubah status secara instan
+- [ ] Warning banner terlihat oleh manager saat mode aktif
+
+**Dependencies:** Task 3, Task 4
+**Files touched:**
+- `resources/js/Pages/Settings/Maintenance.vue`
+- `resources/js/Layouts/AuthenticatedLayout.vue`
+- `app/Http/Middleware/HandleInertiaRequests.php`
+**Estimated scope:** Medium (3 files)
+
+---
+
+## Task 6: Feature Testing & Build Verification
+**Description:** Buat automated test untuk skenario end-to-end mode pemeliharaan dan build asset produksi.
+
+**Acceptance criteria:**
+- [ ] Automated Feature Test menguji akses saat maintenance OFF vs ON untuk role yang berbeda.
+- [ ] `npm run build` dan `php artisan test` lulus 100%.
+
+**Verification:**
+- [ ] `php artisan test --filter=MaintenanceModeTest` lulus
+- [ ] `npm run build` berhasil tanpa error
+
+**Dependencies:** Task 1 - Task 5
+**Files touched:**
+- `tests/Feature/MaintenanceModeTest.php`
+**Estimated scope:** Small (1-2 files)

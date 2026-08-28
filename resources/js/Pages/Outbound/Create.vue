@@ -2,11 +2,13 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, useForm, Link } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
-import { PhArrowLeft, PhQrCode, PhTruck } from '@phosphor-icons/vue';
+import InputError from '@/Components/InputError.vue';
+import { PhArrowLeft, PhQrCode, PhTruck, PhListChecks, PhPackage, PhWarningCircle } from '@phosphor-icons/vue';
 import { QrcodeStream } from 'vue-qrcode-reader';
 
 const props = defineProps({
-    items: Array
+    items: Array,
+    pickingLists: Array,
 });
 
 const form = useForm({
@@ -18,7 +20,8 @@ const form = useForm({
     status: 'completed',
     courier: '',
     estimated_delivery_date: '',
-    notes: ''
+    notes: '',
+    picking_list_id: '',
 });
 
 const showScanner = ref(false);
@@ -34,7 +37,6 @@ const onDetect = (detectedCodes) => {
         form.item_id = foundItem.id;
         showScanner.value = false;
         scannerError.value = '';
-        try { new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU').play(); } catch (e) {}
     } else {
         scannerError.value = `Barang dengan SKU "${decodedText}" tidak ditemukan.`;
     }
@@ -59,220 +61,328 @@ const selectedItem = computed(() => {
     return props.items.find(i => i.id === form.item_id);
 });
 
+const selectedPickingList = computed(() => {
+    if (!form.picking_list_id) return null;
+    return props.pickingLists.find(pl => pl.id == form.picking_list_id);
+});
+
+const selectPickingListItem = (item) => {
+    form.item_id = item.id;
+    form.quantity = item.pivot?.quantity || 1;
+};
+
 const submit = () => {
     form.post(route('outbound.store'));
 };
 </script>
 
 <template>
-    <Head title="Input Barang Keluar" />
+    <Head title="Input Pengeluaran Barang (Outbound)" />
 
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex items-center space-x-4">
-                <Link :href="route('outbound.index')" class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-600 hover:text-black transition-colors shadow-sm border border-black/5">
-                    <PhArrowLeft class="w-5 h-5" />
-                </Link>
-                <h2 class="text-2xl font-bold tracking-tighter text-black">
-                    Input Barang Keluar
-                </h2>
+            <div class="max-w-4xl mx-auto flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <Link :href="route('outbound.index')" class="w-11 h-11 rounded-full bg-white hover:bg-black/5 flex items-center justify-center border border-black/10 text-gray-700 hover:text-black transition-all shadow-sm hover:scale-105 active:scale-95">
+                        <PhArrowLeft class="w-5 h-5" />
+                    </Link>
+                    <div>
+                        <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-black leading-tight">
+                            Pengeluaran Barang (Outbound)
+                        </h2>
+                        <p class="text-xs text-gray-500 font-medium">Buat pesanan pengiriman barang dan kurangi kuantitas stok gudang.</p>
+                    </div>
+                </div>
             </div>
         </template>
 
-        <div class="max-w-4xl">
-            <div class="bg-white border-r border-black/10">
-                <div class="bg-transparent  overflow-hidden p-8 md:p-12">
+        <div class="max-w-4xl mx-auto pb-12">
+            <div class="bg-white border border-black/10 rounded-3xl shadow-sm overflow-hidden">
+                <form @submit.prevent="submit" class="p-8 sm:p-10 space-y-10 divide-y divide-black/5">
                     
-                    <form @submit.prevent="submit" class="space-y-8">
-                        
-                        <!-- Scanner & Picking List Section -->
-                        <div class="bg-gray-50 rounded-[1.5rem] p-6 border border-black/5">
-                            <div class="flex items-center justify-between mb-4">
+                    <!-- Section 1: Pemilihan Barang / Picking List -->
+                    <div class="space-y-6 pt-0">
+                        <div class="flex items-center justify-between gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                                    <PhListChecks class="w-5 h-5" weight="duotone" />
+                                </div>
                                 <div>
-                                    <h3 class="text-sm font-bold tracking-tight text-black">Picking List (Pilih Barang)</h3>
-                                    <p class="text-xs text-gray-600 mt-1">Pilih manual atau scan QR Code label.</p>
+                                    <h3 class="text-base font-semibold tracking-tight text-black">Pemilihan Barang</h3>
+                                    <p class="text-xs text-gray-500">Pilih dari Picking List atau pilih manual via katalog &amp; QR scanner.</p>
                                 </div>
-                                <button type="button" @click="showScanner = !showScanner" class="flex items-center gap-3 px-6 py-4 bg-white rounded-full text-xs font-semibold text-black shadow-sm hover:bg-gray-50 transition-colors border border-black/5">
-                                    <PhQrCode class="w-4 h-4" />
-                                    {{ showScanner ? 'Tutup Scanner' : 'Scan QR' }}
-                                </button>
                             </div>
 
-                            <!-- Scanner Viewfinder -->
-                            <div v-if="showScanner" class="mb-6 rounded-2xl overflow-hidden bg-black aspect-video relative max-w-md mx-auto ring-4 ring-terracotta-600/30">
-                                <qrcode-stream @detect="onDetect" @camera-on="onInit"></qrcode-stream>
-                                <div v-if="scannerError" class="absolute inset-0 flex items-center justify-center bg-black/80 text-white text-xs font-medium p-6 sm:p-8 text-center">
-                                    {{ scannerError }}
-                                </div>
-                                <div class="absolute inset-0 border-2 border-dashed border-white/50 pointer-events-none m-8 rounded-xl opacity-50"></div>
-                            </div>
+                            <button 
+                                type="button" 
+                                @click="showScanner = !showScanner" 
+                                class="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 text-black border border-black/10 rounded-full text-xs font-semibold shadow-sm transition-all hover:scale-105 active:scale-95"
+                            >
+                                <PhQrCode class="w-4 h-4 text-terracotta-600" />
+                                <span>{{ showScanner ? 'Tutup Scanner' : 'Scan QR SKU' }}</span>
+                            </button>
+                        </div>
 
-                            <!-- Select Item -->
+                        <!-- QR Scanner Viewfinder -->
+                        <div v-if="showScanner" class="p-4 bg-black rounded-2xl relative overflow-hidden max-w-md mx-auto aspect-video">
+                            <qrcode-stream @detect="onDetect" @camera-on="onInit"></qrcode-stream>
+                            <div v-if="scannerError" class="absolute inset-0 flex items-center justify-center bg-black/85 text-white text-xs font-medium p-4 text-center">
+                                {{ scannerError }}
+                            </div>
+                            <div class="absolute inset-0 border-2 border-dashed border-white/40 pointer-events-none m-6 rounded-xl"></div>
+                        </div>
+
+                        <div class="space-y-6">
+                            <!-- Picking List Selection -->
                             <div>
+                                <label for="picking_list_id" class="block text-xs font-semibold text-gray-700 mb-2">
+                                    Hubungkan dengan Picking List (Opsional)
+                                </label>
+                                <select
+                                    id="picking_list_id"
+                                    v-model="form.picking_list_id"
+                                    class="w-full px-4 py-3 rounded-xl bg-white border border-black/10 focus:border-black focus:ring-1 focus:ring-black transition-all text-sm"
+                                >
+                                    <option value="">-- Tanpa Picking List (Pilih Manual di bawah) --</option>
+                                    <option v-for="pl in pickingLists" :key="pl.id" :value="pl.id">
+                                        [{{ pl.code }}] • {{ pl.items?.length || 0 }} barang ({{ pl.status === 'completed' ? 'Selesai' : 'Pending' }})
+                                    </option>
+                                </select>
+                            </div>
+
+                            <!-- Expandable Picking List Items -->
+                            <div v-if="selectedPickingList && selectedPickingList.items?.length > 0" class="pt-2 space-y-2">
+                                <p class="text-xs font-semibold text-gray-500">Daftar Barang di Picking List (Klik untuk memilih):</p>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        v-for="item in selectedPickingList.items" 
+                                        :key="item.id"
+                                        @click="selectPickingListItem(item)"
+                                        :class="[
+                                            'flex items-center justify-between p-3 rounded-xl border transition-all text-left',
+                                            form.item_id == item.id 
+                                                ? 'border-terracotta-600 bg-terracotta-50/50 shadow-sm' 
+                                                : 'border-black/10 hover:bg-gray-50'
+                                        ]"
+                                    >
+                                        <div class="flex items-center gap-2.5">
+                                            <div class="w-7 h-7 rounded bg-black/5 flex items-center justify-center text-gray-700">
+                                                <PhPackage class="w-3.5 h-3.5" />
+                                            </div>
+                                            <div>
+                                                <p class="text-xs font-semibold text-black">{{ item.name }}</p>
+                                                <p class="text-[10px] text-gray-400 font-mono">{{ item.sku }}</p>
+                                            </div>
+                                        </div>
+                                        <span class="text-xs font-bold text-black">{{ item.pivot?.quantity || 0 }} {{ item.unit }}</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Manual Item Selection -->
+                            <div>
+                                <label for="item_id" class="block text-xs font-semibold text-gray-700 mb-2">
+                                    Pilih Barang Dari Master Katalog <span class="text-red-500">*</span>
+                                </label>
                                 <select
                                     id="item_id"
                                     v-model="form.item_id"
-                                    class="block w-full px-6 py-4 border border-black/10 rounded-xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-all"
+                                    class="w-full px-4 py-3 rounded-xl bg-white border border-black/10 focus:border-black focus:ring-1 focus:ring-black transition-all text-sm"
                                     required
                                 >
                                     <option value="" disabled>-- Pilih Barang --</option>
                                     <option v-for="item in items" :key="item.id" :value="item.id">
-                                        [{{ item.sku }}] {{ item.name }}
+                                        [{{ item.sku }}] {{ item.name }} • Sisa Stok: {{ item.quantity }} {{ item.unit }}
                                     </option>
                                 </select>
-                                <div v-if="form.errors.item_id" class="mt-2 text-sm text-red-600">{{ form.errors.item_id }}</div>
+                                <InputError class="mt-1.5" :message="form.errors.item_id" />
                             </div>
 
-                            <!-- Selected Item Details -->
-                            <div v-if="selectedItem" class="mt-4 flex flex-col md:flex-row items-start md:items-center justify-between bg-white p-6 sm:p-8 rounded-xl border border-black/5 gap-6">
-                                <div class="text-sm flex-1">
-                                    <p class="text-gray-600 text-xs">SKU</p>
-                                    <p class="font-mono text-black font-semibold">{{ selectedItem.sku }}</p>
+                            <!-- Selected Item Snapshot Banner -->
+                            <div v-if="selectedItem" class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-2xl bg-gray-50 border border-black/5 gap-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-xl bg-terracotta-50 flex items-center justify-center text-terracotta-600">
+                                        <PhPackage class="w-5 h-5" weight="duotone" />
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-semibold text-black">{{ selectedItem.name }}</p>
+                                        <p class="text-xs text-gray-400 font-mono">{{ selectedItem.sku }} • {{ selectedItem.category }}</p>
+                                    </div>
                                 </div>
-                                <div class="text-sm flex-1">
-                                    <p class="text-gray-600 text-xs">Lokasi Rak</p>
-                                    <p class="font-medium text-black">{{ selectedItem.location || 'Tidak diset' }}</p>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-xs text-gray-600">Stok Tersedia</p>
-                                    <p class="text-xl font-bold" :class="selectedItem.quantity > 0 ? 'text-green-600' : 'text-red-600'">
-                                        {{ selectedItem.quantity }} <span class="text-sm font-normal text-gray-600">{{ selectedItem.unit || 'Pcs' }}</span>
-                                    </p>
+                                <div class="flex items-center gap-4 text-right">
+                                    <div>
+                                        <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Stok Tersedia</p>
+                                        <p :class="['text-base font-bold', selectedItem.quantity > 0 ? 'text-emerald-600' : 'text-red-600']">
+                                            {{ selectedItem.quantity }} <span class="text-xs font-normal text-gray-500">{{ selectedItem.unit || 'Pcs' }}</span>
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <!-- Quantity -->
-                            <div class="md:col-span-2">
-                                <label for="quantity" class="block text-sm font-medium text-gray-700">Jumlah Keluar</label>
-                                <div class="flex items-center gap-6 mt-2">
-                                    <input
-                                        id="quantity"
-                                        type="number"
-                                        min="1"
-                                        :max="selectedItem ? selectedItem.quantity : null"
-                                        v-model="form.quantity"
-                                        required
-                                        class="block w-full md:w-1/3 px-6 py-4 border border-black/10 rounded-2xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-all"
-                                    />
-                                    <span v-if="selectedItem" class="text-sm font-medium text-gray-600">{{ selectedItem.unit || 'Pcs' }}</span>
-                                </div>
-                                <div v-if="form.errors.quantity" class="mt-2 text-sm text-red-600">{{ form.errors.quantity }}</div>
+                    <!-- Section 2: Data Pengiriman & Penerima -->
+                    <div class="space-y-6 pt-10">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600">
+                                <PhTruck class="w-5 h-5" weight="duotone" />
                             </div>
-
-                            <!-- Customer Name -->
                             <div>
-                                <label for="customer_name" class="block text-sm font-medium text-gray-700">Nama Customer / Penerima</label>
+                                <h3 class="text-base font-semibold tracking-tight text-black">Detail Tujuan &amp; Ekspedisi</h3>
+                                <p class="text-xs text-gray-500">Informasi nama penerima, alamat pengiriman, dan kurir.</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Quantity -->
+                            <div>
+                                <label for="quantity" class="block text-xs font-semibold text-gray-700 mb-2">
+                                    Jumlah Barang Keluar <span class="text-red-500">*</span>
+                                </label>
                                 <input
-                                    id="customer_name"
-                                    type="text"
-                                    v-model="form.customer_name"
+                                    id="quantity"
+                                    type="number"
+                                    min="1"
+                                    :max="selectedItem ? selectedItem.quantity : null"
+                                    v-model="form.quantity"
                                     required
-                                    class="mt-2 block w-full px-6 py-4 border border-black/10 rounded-2xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-all"
+                                    class="w-full px-4 py-3 rounded-xl bg-white border border-black/10 focus:border-black focus:ring-1 focus:ring-black transition-all text-base font-semibold"
                                 />
-                                <div v-if="form.errors.customer_name" class="mt-2 text-sm text-red-600">{{ form.errors.customer_name }}</div>
+                                <p v-if="selectedItem && form.quantity > selectedItem.quantity" class="text-xs text-red-600 mt-1 font-medium flex items-center gap-1">
+                                    <PhWarningCircle class="w-3.5 h-3.5" />
+                                    Jumlah keluar melebihi sisa stok ({{ selectedItem.quantity }}).
+                                </p>
+                                <InputError class="mt-1.5" :message="form.errors.quantity" />
                             </div>
 
                             <!-- Transaction Date -->
                             <div>
-                                <label for="transaction_date" class="block text-sm font-medium text-gray-700">Tanggal Transaksi</label>
+                                <label for="transaction_date" class="block text-xs font-semibold text-gray-700 mb-2">
+                                    Tanggal Transaksi <span class="text-red-500">*</span>
+                                </label>
                                 <input
                                     id="transaction_date"
                                     type="date"
                                     v-model="form.transaction_date"
                                     required
-                                    class="mt-2 block w-full px-6 py-4 border border-black/10 rounded-2xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-all"
+                                    class="w-full px-4 py-3 rounded-xl bg-white border border-black/10 focus:border-black focus:ring-1 focus:ring-black transition-all text-sm"
                                 />
-                                <div v-if="form.errors.transaction_date" class="mt-2 text-sm text-red-600">{{ form.errors.transaction_date }}</div>
+                                <InputError class="mt-1.5" :message="form.errors.transaction_date" />
                             </div>
 
-                            <!-- Customer Address -->
-                            <div class="md:col-span-2">
-                                <label for="customer_address" class="block text-sm font-medium text-gray-700">Alamat Pengiriman</label>
-                                <textarea
-                                    id="customer_address"
-                                    class="mt-2 block w-full px-6 py-4 border border-black/10 rounded-2xl bg-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-all"
-                                    rows="2"
-                                    v-model="form.customer_address"
+                            <!-- Customer Name -->
+                            <div>
+                                <label for="customer_name" class="block text-xs font-semibold text-gray-700 mb-2">
+                                    Nama Penerima / Customer <span class="text-red-500">*</span>
+                                </label>
+                                <input
+                                    id="customer_name"
+                                    type="text"
+                                    v-model="form.customer_name"
                                     required
-                                ></textarea>
-                                <div v-if="form.errors.customer_address" class="mt-2 text-sm text-red-600">{{ form.errors.customer_address }}</div>
+                                    placeholder="Contoh: Lab Komputer / Bapak Budi"
+                                    class="w-full px-4 py-3 rounded-xl bg-white border border-black/10 focus:border-black focus:ring-1 focus:ring-black transition-all text-sm"
+                                />
+                                <InputError class="mt-1.5" :message="form.errors.customer_name" />
                             </div>
-                            
+
                             <!-- Courier -->
                             <div>
-                                <label for="courier" class="block text-sm font-medium text-gray-700 flex items-center gap-3">
-                                    <PhTruck class="w-4 h-4 text-gray-600" /> Ekspedisi / Kurir
+                                <label for="courier" class="block text-xs font-semibold text-gray-700 mb-2">
+                                    Kurir / Ekspedisi Pengantar
                                 </label>
                                 <input
                                     id="courier"
                                     type="text"
                                     v-model="form.courier"
-                                    placeholder="JNE / J&T / Kurir Internal"
-                                    class="mt-2 block w-full px-6 py-4 border border-black/10 rounded-2xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-all"
+                                    placeholder="JNE / J&amp;T / Kurir Internal Gudang"
+                                    class="w-full px-4 py-3 rounded-xl bg-white border border-black/10 focus:border-black focus:ring-1 focus:ring-black transition-all text-sm"
                                 />
-                                <div v-if="form.errors.courier" class="mt-2 text-sm text-red-600">{{ form.errors.courier }}</div>
+                                <InputError class="mt-1.5" :message="form.errors.courier" />
                             </div>
-                            
-                            <!-- Status -->
+
+                            <!-- Customer Address -->
                             <div class="md:col-span-2">
-                                <label for="status" class="block text-sm font-medium text-gray-700">Status Pemrosesan</label>
+                                <label for="customer_address" class="block text-xs font-semibold text-gray-700 mb-2">
+                                    Alamat Pengiriman / Lokasi Tujuan <span class="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    id="customer_address"
+                                    v-model="form.customer_address"
+                                    rows="2"
+                                    required
+                                    placeholder="Tuliskan detail ruang/gedung/alamat penerima..."
+                                    class="w-full px-4 py-3 rounded-xl bg-white border border-black/10 focus:border-black focus:ring-1 focus:ring-black transition-all text-sm placeholder-gray-400"
+                                ></textarea>
+                                <InputError class="mt-1.5" :message="form.errors.customer_address" />
+                            </div>
+
+                            <!-- Status -->
+                            <div>
+                                <label for="status" class="block text-xs font-semibold text-gray-700 mb-2">
+                                    Status Pengeluaran <span class="text-red-500">*</span>
+                                </label>
                                 <select
                                     id="status"
                                     v-model="form.status"
-                                    class="mt-2 block w-full px-6 py-4 border border-black/10 rounded-2xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-all"
+                                    class="w-full px-4 py-3 rounded-xl bg-white border border-black/10 focus:border-black focus:ring-1 focus:ring-black transition-all text-sm"
                                     required
                                 >
-                                    <option value="completed">Selesai (Stok akan langsung berkurang)</option>
-                                    <option value="pending">Tertunda / Pending (Stok belum berkurang)</option>
+                                    <option value="completed">Selesai (Completed - Stok gudang langsung berkurang)</option>
+                                    <option value="pending">Tertunda (Pending - Menunggu proses packing/ambil)</option>
                                 </select>
-                                <div v-if="form.errors.status" class="mt-2 text-sm text-red-600">{{ form.errors.status }}</div>
+                                <InputError class="mt-1.5" :message="form.errors.status" />
                             </div>
 
-                            <!-- Estimated Delivery -->
+                            <!-- Estimated Delivery Date -->
                             <div>
-                                <label for="estimated_delivery_date" class="block text-sm font-medium text-gray-700">Estimasi Tanggal Kirim</label>
+                                <label for="estimated_delivery_date" class="block text-xs font-semibold text-gray-700 mb-2">
+                                    Estimasi Tanggal Kirim / Tiba
+                                </label>
                                 <input
                                     id="estimated_delivery_date"
                                     type="date"
                                     v-model="form.estimated_delivery_date"
-                                    class="mt-2 block w-full px-6 py-4 border border-black/10 rounded-2xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-all"
+                                    class="w-full px-4 py-3 rounded-xl bg-white border border-black/10 focus:border-black focus:ring-1 focus:ring-black transition-all text-sm"
                                 />
-                                <div v-if="form.errors.estimated_delivery_date" class="mt-2 text-sm text-red-600">{{ form.errors.estimated_delivery_date }}</div>
+                                <InputError class="mt-1.5" :message="form.errors.estimated_delivery_date" />
                             </div>
 
                             <!-- Notes -->
                             <div class="md:col-span-2">
-                                <label for="notes" class="block text-sm font-medium text-gray-700">Catatan Tambahan</label>
+                                <label for="notes" class="block text-xs font-semibold text-gray-700 mb-2">
+                                    Catatan Pengeluaran / Keperluan
+                                </label>
                                 <textarea
                                     id="notes"
-                                    class="mt-2 block w-full px-6 py-4 border border-black/10 rounded-2xl bg-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-all"
-                                    rows="2"
                                     v-model="form.notes"
+                                    rows="2"
+                                    placeholder="Catatan keperluan proyek, tujuan barang, dll..."
+                                    class="w-full px-4 py-3 rounded-xl bg-white border border-black/10 focus:border-black focus:ring-1 focus:ring-black transition-all text-sm placeholder-gray-400"
                                 ></textarea>
-                                <div v-if="form.errors.notes" class="mt-2 text-sm text-red-600">{{ form.errors.notes }}</div>
+                                <InputError class="mt-1.5" :message="form.errors.notes" />
                             </div>
                         </div>
+                    </div>
 
-                        <div class="flex items-center justify-end pt-4 gap-6">
-                            <Link
-                                :href="route('outbound.index')"
-                                class="px-6 py-3 text-sm font-semibold text-gray-600 hover:text-black transition-colors"
-                            >
-                                Batal
-                            </Link>
-                            <button
-                                type="submit"
-                                :class="{'opacity-50 cursor-not-allowed': form.processing || (selectedItem && form.quantity > selectedItem.quantity)}"
-                                :disabled="form.processing || (selectedItem && form.quantity > selectedItem.quantity)"
-                                class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-full text-sm font-semibold text-white bg-terracotta-600 hover:bg-terracotta-700 transition-all duration-700 shadow-[0_8px_30px_rgb(193,83,53,0.3)] hover:scale-[0.98]"
-                            >
-                                Buat Pengiriman (Surat Jalan)
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    <!-- Action Bar -->
+                    <div class="flex items-center justify-between pt-8">
+                        <Link
+                            :href="route('outbound.index')"
+                            class="px-6 py-3 text-sm font-semibold text-gray-600 hover:text-black transition-all rounded-full hover:bg-black/5"
+                        >
+                            Batal
+                        </Link>
+                        <button
+                            type="submit"
+                            :disabled="form.processing || (selectedItem && form.quantity > selectedItem.quantity)"
+                            class="inline-flex items-center justify-center px-8 py-3.5 bg-terracotta-600 hover:bg-terracotta-700 text-white font-semibold text-sm rounded-full shadow-[0_8px_25px_rgba(193,83,53,0.25)] hover:scale-[1.02] active:scale-95 transition-all duration-300 disabled:opacity-50"
+                        >
+                            <span>{{ form.processing ? 'Menyimpan...' : 'Buat Surat Jalan Pengeluaran' }}</span>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </AuthenticatedLayout>

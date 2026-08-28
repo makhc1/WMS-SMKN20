@@ -16,8 +16,8 @@ class UserController extends Controller
 
         if ($request->has('search')) {
             $search = $request->string('search');
-            $query->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+            $query->where('name', 'like', '%' . $search . '%')
+                  ->orWhere('email', 'like', '%' . $search . '%');
         }
 
         $users = $query->orderBy('name')->paginate(10)->withQueryString();

@@ -30,3 +30,13 @@ Thumbs.db
 /Laporan
 /.impeccable
 /database/seeders/TransactionSeeder.php
+
+# Excluded files
+test_screenshots/
+cloudflared.exe
+revis.md
+REVIS.MD
+task_plan.md
+test_app.py
+test_debug.py
+nul

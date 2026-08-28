@@ -8,18 +8,19 @@ use Inertia\Inertia;
 
 class LocationController extends Controller
 {
+
     public function index(Request $request)
     {
         $query = Location::query();
 
         if ($request->has('search')) {
             $search = $request->string('search');
-            $query->where('code', 'like', "%{$search}%")
-                  ->orWhere('name', 'like', "%{$search}%")
-                  ->orWhere('zone_name', 'like', "%{$search}%");
+            $query->where('code', 'like', '%' . $search . '%')
+                  ->orWhere('name', 'like', '%' . $search . '%')
+                  ->orWhere('zone_name', 'like', '%' . $search . '%');
         }
 
-        $locations = $query->orderBy('code')->paginate(10)->withQueryString();
+        $locations = $query->withCount('items')->orderBy('code')->paginate(10)->withQueryString();
 
         return Inertia::render('Locations/Index', [
             'locations' => $locations,
@@ -75,5 +76,15 @@ class LocationController extends Controller
     {
         $location->delete();
         return redirect()->route('locations.index')->with('message', 'Lokasi/Rak berhasil dihapus.');
+    }
+
+    public function items($id)
+    {
+        $location = Location::with('items')->findOrFail($id);
+        
+        return response()->json([
+            'location' => $location,
+            'items' => $location->items
+        ]);
     }
 }

@@ -1,8 +1,11 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { PhPlus, PhPencilSimple, PhTrash, PhMagnifyingGlass, PhQrCode, PhImageSquare } from '@phosphor-icons/vue';
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
+
+const page = usePage();
+const canDelete = computed(() => ['Admin', 'Warehouse Manager'].includes(page.props.auth.user.role));
 
 const props = defineProps({
     items: Object,
@@ -22,9 +25,16 @@ watch([search, category], ([searchVal, categoryVal]) => {
     }, 300);
 });
 
-const deleteItem = (id) => {
-    if (confirm('Yakin ingin menghapus barang ini? (Data yang terhapus tidak dapat dikembalikan)')) {
-        router.delete(route('items.destroy', id));
+const deleteItem = (id, name) => {
+    if (confirm(`Yakin ingin menghapus "${name}"? Data yang terhapus tidak dapat dikembalikan.`)) {
+        router.delete(route('items.destroy', id), {
+            preserveScroll: true,
+            onError: (errors) => {
+                if (errors.error) {
+                    alert(errors.error);
+                }
+            }
+        });
     }
 };
 
@@ -42,6 +52,17 @@ const getStockStatus = (item) => {
         <template #header>
             Master Barang
         </template>
+
+        <!-- Flash Messages -->
+        <div v-if="$page.props.flash?.success" class="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-700 font-medium">
+            {{ $page.props.flash.success }}
+        </div>
+        <div v-if="$page.props.flash?.message" class="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-700 font-medium">
+            {{ $page.props.flash.message }}
+        </div>
+        <div v-if="$page.props.errors?.error" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 font-medium">
+            {{ $page.props.errors.error }}
+        </div>
 
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
             <div class="flex flex-col md:flex-row gap-6 w-full md:w-auto">
@@ -117,7 +138,7 @@ const getStockStatus = (item) => {
                                         <Link :href="route('items.edit', item.id)" class="p-2 text-gray-600 hover:text-black hover:bg-black/5 rounded-full transition-colors duration-300" title="Edit">
                                             <PhPencilSimple class="w-4 h-4" />
                                         </Link>
-                                        <button @click="deleteItem(item.id)" class="p-2 text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors duration-300" title="Hapus">
+                                        <button v-if="canDelete" @click="deleteItem(item.id, item.name)" class="p-2 text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors duration-300" title="Hapus">
                                             <PhTrash class="w-4 h-4" />
                                         </button>
                                     </div>

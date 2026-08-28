@@ -14,4 +14,11 @@ class Location extends Model
         'capacity_percentage',
         'status',
     ];
+
+    public function items()
+    {
+        return $this->belongsToMany(Item::class, 'item_location')
+            ->withPivot('quantity')
+            ->withTimestamps();
+    }
 }

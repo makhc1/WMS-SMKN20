@@ -14,6 +14,7 @@ class InboundTransaction extends Model
         'notes',
         'receipt_id',
         'condition',
+        'status',
     ];
 
     public function item()

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\OutboundTransaction;
 use App\Models\Item;
+use App\Models\PickingList;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -20,8 +21,13 @@ class OutboundTransactionController extends Controller
                            ->orderBy('created_at', 'desc')
                            ->paginate(10);
 
+        $pickingLists = PickingList::with('items')
+                                  ->orderBy('created_at', 'desc')
+                                  ->paginate(10);
+
         return Inertia::render('Outbound/Index', [
-            'outbounds' => $outbounds
+            'outbounds' => $outbounds,
+            'pickingLists' => $pickingLists
         ]);
     }
 
@@ -30,8 +36,15 @@ class OutboundTransactionController extends Controller
         // Select all items for the dropdown
         $items = Item::orderBy('name')->get(['id', 'sku', 'name', 'quantity', 'location', 'brand', 'unit']);
         
+        // Select pending picking lists for the dropdown
+        $pickingLists = PickingList::with('items')
+            ->where('status', 'pending')
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
         return Inertia::render('Outbound/Create', [
-            'items' => $items
+            'items' => $items,
+            'pickingLists' => $pickingLists
         ]);
     }
 
