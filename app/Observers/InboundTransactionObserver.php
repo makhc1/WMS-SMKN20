@@ -12,10 +12,11 @@ class InboundTransactionObserver
      */
     public function created(InboundTransaction $inboundTransaction): void
     {
-        $item = Item::find($inboundTransaction->item_id);
-        if ($item) {
-            $item->quantity += $inboundTransaction->quantity;
-            $item->save();
+        if ($inboundTransaction->status === 'completed') {
+            $item = Item::find($inboundTransaction->item_id);
+            if ($item) {
+                $item->increment('quantity', $inboundTransaction->quantity);
+            }
         }
     }
 
@@ -24,15 +25,29 @@ class InboundTransactionObserver
      */
     public function updated(InboundTransaction $inboundTransaction): void
     {
-        // If quantity was changed, adjust stock
-        if ($inboundTransaction->isDirty('quantity')) {
-            $item = Item::find($inboundTransaction->item_id);
-            if ($item) {
-                $oldQuantity = $inboundTransaction->getOriginal('quantity');
-                $newQuantity = $inboundTransaction->quantity;
-                $diff = $newQuantity - $oldQuantity;
-                $item->quantity += $diff;
-                $item->save();
+        $item = Item::find($inboundTransaction->item_id);
+        if (!$item) {
+            return;
+        }
+
+        $oldStatus = $inboundTransaction->getOriginal('status');
+        $newStatus = $inboundTransaction->status;
+        $oldQuantity = (int) $inboundTransaction->getOriginal('quantity');
+        $newQuantity = (int) $inboundTransaction->quantity;
+
+        if ($oldStatus === 'pending' && $newStatus === 'completed') {
+            // Status changed from pending to completed: add inbound quantity
+            $item->increment('quantity', $newQuantity);
+        } elseif ($oldStatus === 'completed' && $newStatus === 'pending') {
+            // Status changed from completed to pending: deduct previously added quantity
+            $item->decrement('quantity', $oldQuantity);
+        } elseif ($newStatus === 'completed' && $inboundTransaction->isDirty('quantity')) {
+            // Quantity changed while status remains completed: adjust difference
+            $diff = $newQuantity - $oldQuantity;
+            if ($diff > 0) {
+                $item->increment('quantity', $diff);
+            } elseif ($diff < 0) {
+                $item->decrement('quantity', abs($diff));
             }
         }
     }
@@ -42,10 +57,11 @@ class InboundTransactionObserver
      */
     public function deleted(InboundTransaction $inboundTransaction): void
     {
-        $item = Item::find($inboundTransaction->item_id);
-        if ($item) {
-            $item->quantity -= $inboundTransaction->quantity;
-            $item->save();
+        if ($inboundTransaction->status === 'completed') {
+            $item = Item::find($inboundTransaction->item_id);
+            if ($item) {
+                $item->decrement('quantity', $inboundTransaction->quantity);
+            }
         }
     }
 
@@ -54,7 +70,12 @@ class InboundTransactionObserver
      */
     public function restored(InboundTransaction $inboundTransaction): void
     {
-        //
+        if ($inboundTransaction->status === 'completed') {
+            $item = Item::find($inboundTransaction->item_id);
+            if ($item) {
+                $item->increment('quantity', $inboundTransaction->quantity);
+            }
+        }
     }
 
     /**

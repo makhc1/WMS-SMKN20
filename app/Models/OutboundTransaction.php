@@ -18,6 +18,7 @@ class OutboundTransaction extends Model
         'courier',
         'estimated_delivery_date',
         'receipt_id',
+        'status',
     ];
 
     public function item()

@@ -8,14 +8,26 @@ use App\Models\Item;
 class OutboundTransactionObserver
 {
     /**
+     * Archive the item from master barang if its stock has reached zero.
+     */
+    protected function archiveIfEmpty(Item $item): void
+    {
+        if ($item->quantity <= 0) {
+            $item->delete();
+        }
+    }
+
+    /**
      * Handle the OutboundTransaction "created" event.
      */
     public function created(OutboundTransaction $outboundTransaction): void
     {
-        $item = Item::find($outboundTransaction->item_id);
-        if ($item) {
-            $item->quantity -= $outboundTransaction->quantity;
-            $item->save();
+        if ($outboundTransaction->status === 'completed') {
+            $item = Item::find($outboundTransaction->item_id);
+            if ($item) {
+                $item->decrement('quantity', $outboundTransaction->quantity);
+                $this->archiveIfEmpty($item);
+            }
         }
     }
 
@@ -24,15 +36,31 @@ class OutboundTransactionObserver
      */
     public function updated(OutboundTransaction $outboundTransaction): void
     {
-        if ($outboundTransaction->isDirty('quantity')) {
-            $item = Item::find($outboundTransaction->item_id);
-            if ($item) {
-                $oldQuantity = $outboundTransaction->getOriginal('quantity');
-                $newQuantity = $outboundTransaction->quantity;
-                $diff = $newQuantity - $oldQuantity;
-                // If it increases, stock goes down. If it decreases, stock goes up.
-                $item->quantity -= $diff;
-                $item->save();
+        $item = Item::find($outboundTransaction->item_id);
+        if (!$item) {
+            return;
+        }
+
+        $oldStatus = $outboundTransaction->getOriginal('status');
+        $newStatus = $outboundTransaction->status;
+        $oldQuantity = (int) $outboundTransaction->getOriginal('quantity');
+        $newQuantity = (int) $outboundTransaction->quantity;
+
+        if ($oldStatus === 'pending' && $newStatus === 'completed') {
+            // Status changed from pending to completed: deduct outbound quantity
+            $item->decrement('quantity', $newQuantity);
+            $this->archiveIfEmpty($item);
+        } elseif ($oldStatus === 'completed' && $newStatus === 'pending') {
+            // Status changed from completed to pending: restore previously deducted quantity
+            $item->increment('quantity', $oldQuantity);
+        } elseif ($newStatus === 'completed' && $outboundTransaction->isDirty('quantity')) {
+            // Quantity changed while status remains completed: adjust difference
+            $diff = $newQuantity - $oldQuantity;
+            if ($diff > 0) {
+                $item->decrement('quantity', $diff);
+                $this->archiveIfEmpty($item);
+            } elseif ($diff < 0) {
+                $item->increment('quantity', abs($diff));
             }
         }
     }
@@ -42,13 +70,23 @@ class OutboundTransactionObserver
      */
     public function deleted(OutboundTransaction $outboundTransaction): void
     {
-        $item = Item::find($outboundTransaction->item_id);
-        if ($item) {
-            $item->quantity += $outboundTransaction->quantity;
-            $item->save();
+        if ($outboundTransaction->status === 'completed') {
+            $item = Item::find($outboundTransaction->item_id);
+            if ($item) {
+                $item->increment('quantity', $outboundTransaction->quantity);
+            }
         }
     }
 
-    public function restored(OutboundTransaction $outboundTransaction): void {}
+    public function restored(OutboundTransaction $outboundTransaction): void
+    {
+        if ($outboundTransaction->status === 'completed') {
+            $item = Item::find($outboundTransaction->item_id);
+            if ($item) {
+                $item->decrement('quantity', $outboundTransaction->quantity);
+            }
+        }
+    }
+
     public function forceDeleted(OutboundTransaction $outboundTransaction): void {}
 }

@@ -69,20 +69,15 @@ class OutboundTransactionController extends Controller
         DB::transaction(function () use ($validated, &$outbound) {
             $item = Item::where('id', $validated['item_id'])->lockForUpdate()->first();
             
-            // Check stock BEFORE creating if status is completed
-            if ($validated['status'] === 'completed' && $item->quantity < $validated['quantity']) {
+            // Check stock BEFORE creating
+            if ($item->quantity < $validated['quantity']) {
                 throw ValidationException::withMessages([
                     'quantity' => 'Stok tidak mencukupi. Stok saat ini: ' . $item->quantity,
                 ]);
             }
 
-            // Create transaction
+            // Create transaction (stock is adjusted automatically via OutboundTransactionObserver)
             $outbound = OutboundTransaction::create($validated);
-
-            if ($validated['status'] === 'completed') {
-                $item->quantity -= $validated['quantity'];
-                $item->save();
-            }
         });
 
         return redirect()->route('outbound.show', $outbound->id)->with('message', 'Pengeluaran barang berhasil dicatat.');
@@ -106,9 +101,6 @@ class OutboundTransactionController extends Controller
 
             $outbound->status = 'completed';
             $outbound->save();
-
-            $item->quantity -= $outbound->quantity;
-            $item->save();
         });
 
         return redirect()->back()->with('message', 'Status Outbound berhasil diubah menjadi Completed. Stok berkurang.');

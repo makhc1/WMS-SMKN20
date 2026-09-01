@@ -1,11 +1,8 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { PhPlus, PhPencilSimple, PhTrash, PhMagnifyingGlass, PhQrCode, PhImageSquare } from '@phosphor-icons/vue';
-import { ref, watch, computed } from 'vue';
-
-const page = usePage();
-const canDelete = computed(() => ['Admin', 'Warehouse Manager'].includes(page.props.auth.user.role));
+import { Head, Link, router } from '@inertiajs/vue3';
+import { PhPlus, PhPencilSimple, PhMagnifyingGlass, PhQrCode, PhImageSquare } from '@phosphor-icons/vue';
+import { ref, watch } from 'vue';
 
 const props = defineProps({
     items: Object,
@@ -24,19 +21,6 @@ watch([search, category], ([searchVal, categoryVal]) => {
         router.get(route('items.index'), { search: searchVal, category: categoryVal }, { preserveState: true, replace: true });
     }, 300);
 });
-
-const deleteItem = (id, name) => {
-    if (confirm(`Yakin ingin menghapus "${name}"? Data yang terhapus tidak dapat dikembalikan.`)) {
-        router.delete(route('items.destroy', id), {
-            preserveScroll: true,
-            onError: (errors) => {
-                if (errors.error) {
-                    alert(errors.error);
-                }
-            }
-        });
-    }
-};
 
 const getStockStatus = (item) => {
     if (item.quantity === 0) return { label: 'Out of Stock', class: 'bg-red-50 text-red-600' };
@@ -133,9 +117,6 @@ const getStockStatus = (item) => {
                                         <Link :href="route('items.edit', item.id)" class="p-2 text-gray-600 hover:text-black hover:bg-black/5 rounded-full transition-colors duration-300" title="Edit">
                                             <PhPencilSimple class="w-4 h-4" />
                                         </Link>
-                                        <button v-if="canDelete" @click="deleteItem(item.id, item.name)" class="p-2 text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors duration-300" title="Hapus">
-                                            <PhTrash class="w-4 h-4" />
-                                        </button>
                                     </div>
                                 </td>
                             </tr>

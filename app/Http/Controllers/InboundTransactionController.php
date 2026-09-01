@@ -66,8 +66,6 @@ class InboundTransactionController extends Controller
             if ($existingItem) {
                 // Update existing item
                 $item = $existingItem;
-                $item->quantity += $validated['quantity'];
-                $item->save();
             } else {
                 // Create new item
                 $itemData = [
@@ -77,7 +75,7 @@ class InboundTransactionController extends Controller
                     'unit' => $validated['unit'],
                     'base_price' => $validated['base_price'] ?? null,
                     'description' => $validated['description'] ?? null,
-                    'quantity' => $validated['status'] === 'completed' ? $validated['quantity'] : 0,
+                    'quantity' => 0,
                     'low_stock_threshold' => 10,
                 ];
 
@@ -88,7 +86,7 @@ class InboundTransactionController extends Controller
                 $item = Item::create($itemData);
             }
 
-            // Create inbound transaction
+            // Create inbound transaction (stock is adjusted automatically via InboundTransactionObserver)
             $inbound = InboundTransaction::create([
                 'item_id' => $item->id,
                 'transaction_date' => $validated['transaction_date'],
@@ -123,10 +121,6 @@ class InboundTransactionController extends Controller
 
             $inbound->status = 'completed';
             $inbound->save();
-
-            $item = Item::where('id', $inbound->item_id)->lockForUpdate()->first();
-            $item->quantity += $inbound->quantity;
-            $item->save();
         });
 
         return redirect()->back()->with('message', 'Status Inbound berhasil diubah menjadi Completed. Stok bertambah.');

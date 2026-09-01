@@ -95,7 +95,7 @@ class ItemController extends Controller
         // Only Admin or Warehouse Manager can manually adjust quantity
         $canAdjustStock = in_array(auth()->user()->role, ['Admin', 'Warehouse Manager']);
         if ($canAdjustStock) {
-            $rules['quantity'] = 'nullable|integer|min:0';
+            $rules['quantity'] = 'nullable|integer|min:1';
         }
 
         $validated = $request->validate($rules);
@@ -114,13 +114,8 @@ class ItemController extends Controller
 
     public function destroy(Item $item)
     {
-        if ($item->quantity > 0) {
-            return back()->withErrors([
-                'error' => 'Tidak dapat menghapus barang "' . $item->name . '" karena masih memiliki stok (' . $item->quantity . ' ' . ($item->unit ?: 'Pcs') . '). Kurangi stok menjadi 0 terlebih dahulu.'
-            ]);
-        }
-
-        $item->delete();
-        return redirect()->route('items.index')->with('success', 'Barang "' . $item->name . '" berhasil diarsipkan.');
+        return back()->withErrors([
+            'error' => 'Master barang tidak dapat dihapus. Data barang hanya dapat diarsipkan melalui proses penghapusan stok secara bertahap.'
+        ]);
     }
 }
