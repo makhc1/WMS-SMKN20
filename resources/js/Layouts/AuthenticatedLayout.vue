@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import { PhHouse, PhCube, PhArrowDownLeft, PhArrowUpRight, PhSignOut, PhList, PhX, PhBell, PhWarningCircle, PhFileText, PhUser, PhMapPin, PhClock, PhWrench } from '@phosphor-icons/vue';
+import { PhHouse, PhCube, PhArrowDownLeft, PhArrowUpRight, PhSignOut, PhList, PhX, PhBell, PhWarningCircle, PhFileText, PhUser, PhMapPin, PhClock, PhWrench, PhTruck } from '@phosphor-icons/vue';
 
 const page = usePage();
 const userRole = page.props.auth.user.role;
@@ -14,6 +14,7 @@ const navigation = [
     { name: 'Riwayat', route: 'riwayat.index', icon: PhClock },
     // Only Admin and Warehouse Manager can access these
     ...( ['Admin', 'Warehouse Manager'].includes(userRole) ? [
+        { name: 'Supplier', route: 'suppliers.index', icon: PhTruck },
         { name: 'Lokasi Rak', route: 'locations.index', icon: PhMapPin },
         { name: 'Laporan', route: 'reports.index', icon: PhFileText },
     ] : []),
@@ -73,29 +74,29 @@ onUnmounted(() => {
             <div class="w-full h-full flex flex-col overflow-hidden relative">
                 
                 <!-- Logo -->
-                <div class="px-8 pt-10 pb-8 flex items-center gap-3">
-                    <img src="/logo.jpg" alt="Logo WMS SMKN 20" class="w-12 h-12 object-cover rounded-full shadow-sm ring-2 ring-terracotta-600/20" />
-                    <span class="font-bold text-2xl tracking-tighter text-black">WMS</span>
+                <div class="px-8 pt-6 pb-6 flex items-center gap-3">
+                    <img src="/logo.jpg" alt="Logo WMS SMKN 20" class="w-10 h-10 object-cover rounded-full shadow-sm ring-2 ring-terracotta-600/20" />
+                    <span class="font-bold text-xl tracking-tighter text-black">WMS</span>
                 </div>
 
                 <!-- Nav -->
-                <nav class="flex-1 px-6 lg:px-8 space-y-2 overflow-y-auto">
+                <nav class="flex-1 px-5 lg:px-7 space-y-1.5 overflow-y-auto">
                     <Link
                         v-for="item in navigation"
                         :key="item.name"
                         :href="route(item.route)"
                         :class="[
                             route().current(item.route) 
-                                ? 'bg-terracotta-600 text-white shadow-[0_8px_20px_rgb(193,83,53,0.25)]' 
+                                ? 'bg-terracotta-600 text-white shadow-[0_4px_12px_rgb(193,83,53,0.25)]' 
                                 : 'text-gray-600 hover:bg-terracotta-50 hover:text-terracotta-900 hover:translate-x-1',
-                            'group flex items-center px-5 py-6 text-sm font-semibold rounded-[1.5rem] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]'
+                            'group flex items-center px-4 py-2.5 text-sm font-semibold rounded-xl transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]'
                         ]"
                     >
                         <component 
                             :is="item.icon" 
                             :class="[
                                 route().current(item.route) ? 'text-white' : 'text-gray-600 group-hover:text-terracotta-600',
-                                'flex-shrink-0 mr-4 h-5 w-5 transition-colors duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]'
+                                'flex-shrink-0 mr-4 h-5 w-5 transition-colors duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]'
                             ]" 
                             weight="duotone"
                         />
@@ -104,8 +105,8 @@ onUnmounted(() => {
                 </nav>
 
                 <!-- User Area -->
-                <div class="p-6 sm:p-8 mt-auto">
-                    <div class="bg-black/5 rounded-[1.5rem] p-2 flex items-center justify-between gap-3">
+                <div class="p-4 sm:p-6 mt-auto">
+                    <div class="bg-black/5 rounded-[1.25rem] p-2 flex items-center justify-between gap-2">
                         <Link :href="route('profile.edit')" class="flex-1 flex items-center gap-3 overflow-hidden group/profile hover:bg-white/80 p-2 rounded-[1.25rem] transition-all duration-500">
                             <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center flex-shrink-0 shadow-[0_4px_10px_rgb(0,0,0,0.05)] font-bold text-sm group-hover/profile:scale-105 transition-transform duration-500">
                                 {{ $page.props.auth.user.name.charAt(0) }}
@@ -123,24 +124,24 @@ onUnmounted(() => {
         <!-- Mobile Menu Modal (Full Screen) -->
         <div 
             v-if="mobileMenuOpen" 
-            class="fixed inset-0 z-[100] bg-white/95 backdrop-blur-3xl flex flex-col px-6 py-24 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
+            class="fixed inset-0 z-[100] bg-white/95 backdrop-blur-3xl flex flex-col px-6 py-12 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
         >
             <button @click="mobileMenuOpen = false" class="absolute top-6 right-6 w-12 h-12 flex items-center justify-center rounded-full bg-black/5 hover:bg-black/10 transition-colors">
                 <PhX class="w-6 h-6 text-black" />
             </button>
             
-            <div class="flex flex-col gap-6 mt-12">
+            <div class="flex flex-col gap-3 mt-6 overflow-y-auto pb-8">
                 <Link
                     v-for="(item, index) in navigation"
                     :key="item.name"
                     :href="route(item.route)"
-                    class="text-4xl tracking-tighter leading-none font-bold tracking-tighter text-black opacity-0 animate-[slideUp_0.7s_cubic-bezier(0.32,0.72,0,1)_forwards]"
-                    :style="`animation-delay: ${index * 100}ms`"
+                    class="text-xl sm:text-2xl font-bold tracking-tight text-black opacity-0 animate-[slideUp_0.7s_cubic-bezier(0.32,0.72,0,1)_forwards]"
+                    :style="`animation-delay: ${index * 50}ms`"
                 >
                     {{ item.name }}
                 </Link>
-                <div class="mt-8 pt-8 border-t border-black/10 opacity-0 animate-[slideUp_0.7s_cubic-bezier(0.32,0.72,0,1)_forwards]" style="animation-delay: 400ms">
-                    <Link :href="route('logout')" method="post" as="button" class="text-xl font-medium text-gray-600 hover:text-black">
+                <div class="mt-4 pt-4 border-t border-black/10 opacity-0 animate-[slideUp_0.7s_cubic-bezier(0.32,0.72,0,1)_forwards]" style="animation-delay: 300ms">
+                    <Link :href="route('logout')" method="post" as="button" class="text-base font-medium text-gray-600 hover:text-black">
                         Sign Out ({{ $page.props.auth.user.name }})
                     </Link>
                 </div>
@@ -150,9 +151,12 @@ onUnmounted(() => {
         <!-- Main Content -->
         
         <!-- Top Right Floating Elements -->
-        <div class="fixed top-6 right-6 md:right-12 z-[60] flex items-center gap-6">
+        <div class="fixed top-4 right-20 md:top-6 md:right-12 z-[60] flex items-center gap-6">
             <div class="relative">
-                <button @click="showNotifications = !showNotifications" class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-black/5 hover:scale-105 transition-transform duration-500 relative">
+                <!-- Mobile Backdrop -->
+                <div v-if="showNotifications" @click="showNotifications = false" class="fixed inset-0 md:hidden bg-transparent"></div>
+
+                <button @click="showNotifications = !showNotifications" class="relative z-10 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-black/5 hover:scale-105 transition-transform duration-500">
                     <PhBell class="w-6 h-6 text-black" />
                     <!-- Badge -->
                     <div v-if="$page.props.lowStockItems && $page.props.lowStockItems.length > 0" class="absolute -top-1 -right-1 w-5 h-5 bg-terracotta-600 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm ring-2 ring-white">
@@ -169,7 +173,7 @@ onUnmounted(() => {
                     leave-from-class="opacity-100 translate-y-0 scale-100"
                     leave-to-class="opacity-0 translate-y-4 scale-95"
                 >
-                    <div v-if="showNotifications" class="absolute top-16 right-0 w-80 md:w-96 bg-white rounded-[2rem] shadow-[0_20px_60px_rgb(0,0,0,0.12)] border border-black/5 overflow-hidden flex flex-col">
+                    <div v-if="showNotifications" class="fixed z-10 top-20 right-4 left-4 md:absolute md:top-16 md:right-0 md:left-auto w-auto md:w-96 bg-white rounded-[2rem] shadow-[0_20px_60px_rgb(0,0,0,0.12)] border border-black/5 overflow-hidden flex flex-col">
                         <div class="p-6 border-b border-black/5 flex items-center justify-between bg-black/[0.01]">
                             <h3 class="font-bold tracking-tighter text-black text-lg">Notifikasi</h3>
                             <span v-if="$page.props.lowStockItems && $page.props.lowStockItems.length > 0" class="text-xs font-semibold text-terracotta-600 bg-terracotta-50 px-4 sm:px-6 py-1 rounded-full">{{ $page.props.lowStockItems.length }} Peringatan</span>

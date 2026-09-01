@@ -1,6 +1,6 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
-import { ref, onMounted, onUnmounted } from 'vue';
+import { Link, usePage } from '@inertiajs/vue3';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 
 defineProps({
     title: {
@@ -11,6 +11,13 @@ defineProps({
         type: String,
         default: 'Silakan masukkan detail Anda untuk melanjutkan.'
     }
+});
+
+const page = usePage();
+const authUsers = computed(() => {
+    const users = page.props.splitAuthUsers || [];
+    if (users.length > 0) return users;
+    return ['AS', 'JD', 'MK']; // Default fallback
 });
 
 const backgroundImages = [
@@ -84,9 +91,11 @@ onUnmounted(() => {
 
                 <div class="mt-12 flex items-center gap-4 border-t border-white/20 pt-8">
                     <div class="flex -space-x-3">
-                        <div class="w-12 h-12 rounded-full border-2 border-[#0a0a0a] bg-terracotta-600 flex items-center justify-center text-sm font-bold text-white shadow-lg">AS</div>
-                        <div class="w-12 h-12 rounded-full border-2 border-[#0a0a0a] bg-gray-800 flex items-center justify-center text-sm font-bold text-white shadow-lg">JD</div>
-                        <div class="w-12 h-12 rounded-full border-2 border-[#0a0a0a] bg-emerald-700 flex items-center justify-center text-sm font-bold text-white shadow-lg">MK</div>
+                        <div v-for="(initial, index) in authUsers" :key="index"
+                             class="w-12 h-12 rounded-full border-2 border-[#0a0a0a] flex items-center justify-center text-sm font-bold text-white shadow-lg"
+                             :class="['bg-terracotta-600', 'bg-gray-800', 'bg-emerald-700'][index % 3]">
+                            {{ initial }}
+                        </div>
                     </div>
                     <div class="text-sm font-medium text-gray-400">
                         Bergabung dengan <span class="text-white">Manajemen Logistik</span> SMKN 20.

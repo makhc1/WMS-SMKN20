@@ -43,6 +43,16 @@ class HandleInertiaRequests extends Middleware
             'systemMaintenance' => function () {
                 return \App\Models\SystemSetting::getMaintenanceDetails();
             },
+            'splitAuthUsers' => function () {
+                return \App\Models\User::latest()->take(3)->get()->map(function ($user) {
+                    $words = explode(' ', trim($user->name));
+                    $initials = '';
+                    foreach (array_slice($words, 0, 2) as $w) {
+                        $initials .= mb_strtoupper(mb_substr($w, 0, 1));
+                    }
+                    return $initials ?: 'U';
+                })->toArray();
+            },
         ];
     }
 }

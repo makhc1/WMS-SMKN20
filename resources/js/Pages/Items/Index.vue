@@ -64,9 +64,9 @@ const getStockStatus = (item) => {
             {{ $page.props.errors.error }}
         </div>
 
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
-            <div class="flex flex-col md:flex-row gap-6 w-full md:w-auto">
-                <div class="relative w-full md:w-80">
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-6">
+            <div class="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+                <div class="relative w-full sm:w-80">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <PhMagnifyingGlass class="h-5 w-5 text-gray-600" />
                     </div>
@@ -77,7 +77,7 @@ const getStockStatus = (item) => {
                         placeholder="Cari SKU atau Nama Barang..." 
                     />
                 </div>
-                <div class="relative w-full md:w-48">
+                <div class="relative w-full sm:w-48">
                     <select v-model="category" class="block w-full pl-4 pr-10 py-3 border border-black/10 rounded-full bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-black focus:border-black sm:text-sm transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] shadow-[0_4px_20px_rgb(0,0,0,0.03)] appearance-none">
                         <option value="">Semua Kategori</option>
                         <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
@@ -85,12 +85,7 @@ const getStockStatus = (item) => {
                 </div>
             </div>
             
-            <Link :href="route('items.create')" class="group inline-flex items-center justify-between pl-6 pr-2 py-2 border border-transparent text-sm font-semibold rounded-full text-white bg-terracotta-600 hover:bg-terracotta-700 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:scale-[0.98] w-full md:w-auto gap-6 shadow-[0_8px_30px_rgb(193,83,53,0.3)]">
-                <span>Tambah Barang</span>
-                <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-105 group-hover:translate-x-0.5">
-                    <PhPlus class="w-4 h-4 text-white" weight="bold" />
-                </div>
-            </Link>
+            
         </div>
 
         <div class="bg-white border border-black/10 rounded-[1.5rem] overflow-hidden">
@@ -164,14 +159,14 @@ const getStockStatus = (item) => {
                 
                 <!-- Pagination -->
                 <div v-if="items.links && items.links.length > 3" class="px-8 py-5 border-t border-black/5 flex items-center justify-between bg-black/[0.01]">
-                    <div class="flex-1 flex justify-between sm:hidden">
+                    <div class="flex-1 flex justify-between lg:hidden">
                         <Link v-if="items.prev_page_url" :href="items.prev_page_url" class="relative inline-flex items-center px-6 py-2 border border-black/10 text-sm font-medium rounded-full text-black bg-white hover:bg-black/5 transition-colors">Previous</Link>
                         <span v-else class="relative inline-flex items-center px-6 py-2 border border-black/10 text-sm font-medium rounded-full text-gray-600 bg-gray-50 cursor-not-allowed">Previous</span>
                         
                         <Link v-if="items.next_page_url" :href="items.next_page_url" class="ml-3 relative inline-flex items-center px-6 py-2 border border-black/10 text-sm font-medium rounded-full text-black bg-white hover:bg-black/5 transition-colors">Next</Link>
                         <span v-else class="ml-3 relative inline-flex items-center px-6 py-2 border border-black/10 text-sm font-medium rounded-full text-gray-600 bg-gray-50 cursor-not-allowed">Next</span>
                     </div>
-                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div class="hidden lg:flex-1 lg:flex lg:items-center lg:justify-between">
                         <div>
                             <p class="text-sm text-gray-600">
                                 Menampilkan <span class="font-medium text-black">{{ items.from }}</span> - <span class="font-medium text-black">{{ items.to }}</span> dari <span class="font-medium text-black">{{ items.total }}</span>
@@ -185,10 +180,10 @@ const getStockStatus = (item) => {
                                         :href="link.url" 
                                         :class="[
                                             link.active ? 'bg-terracotta-600 text-white font-semibold' : 'text-gray-600 hover:bg-black/5 hover:text-black',
-                                            'relative inline-flex items-center px-6 py-4 text-sm rounded-full transition-all duration-300'
+                                            'relative inline-flex items-center px-4 py-2 xl:px-6 xl:py-4 text-xs xl:text-sm rounded-full transition-all duration-300'
                                         ]"
                                     >{{ link.label }}</Link>
-                                    <span v-else class="relative inline-flex items-center px-6 py-4 text-sm font-medium text-gray-400 cursor-not-allowed">{{ link.label }}</span>
+                                    <span v-else class="relative inline-flex items-center px-4 py-2 xl:px-6 xl:py-4 text-xs xl:text-sm font-medium text-gray-400 cursor-not-allowed">{{ link.label }}</span>
                                 </template>
                             </nav>
                         </div>

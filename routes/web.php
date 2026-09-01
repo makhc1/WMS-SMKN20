@@ -102,6 +102,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('items', \App\Http\Controllers\ItemController::class)->only(['index', 'show']);
     
+    Route::middleware('role:Admin,Warehouse Manager')->group(function () {
+        Route::resource('suppliers', \App\Http\Controllers\SupplierController::class)->except(['index', 'show']);
+    });
+    Route::resource('suppliers', \App\Http\Controllers\SupplierController::class)->only(['index', 'show']);
+    
     Route::resource('inbound', \App\Http\Controllers\InboundTransactionController::class);
     Route::post('inbound/{id}/complete', [\App\Http\Controllers\InboundTransactionController::class, 'markAsCompleted'])->name('inbound.complete');
     

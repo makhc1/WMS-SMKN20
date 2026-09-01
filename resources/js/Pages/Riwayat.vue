@@ -77,7 +77,7 @@ const groupedTransactions = computed(() => {
         </template>
 
         <!-- Summary Metrics -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
             <div class="bg-white border border-black/10 rounded-[1.25rem] p-5">
                 <div class="flex items-center gap-3 mb-3">
                     <div class="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center">
@@ -121,15 +121,15 @@ const groupedTransactions = computed(() => {
         </div>
 
         <!-- Tabs & Search -->
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
-            <div class="flex items-center gap-2">
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-6">
+            <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
                 <button
                     @click="type = ''"
                     :class="[
                         type === ''
                             ? 'bg-black text-white'
                             : 'bg-white text-gray-600 hover:bg-gray-50',
-                        'inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-colors border border-black/5'
+                        'inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-colors border border-black/5 flex-1 sm:flex-none'
                     ]"
                 >
                     Semua
@@ -140,7 +140,7 @@ const groupedTransactions = computed(() => {
                         type === 'inbound'
                             ? 'bg-black text-white'
                             : 'bg-white text-gray-600 hover:bg-gray-50',
-                        'inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-colors border border-black/5'
+                        'inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-colors border border-black/5 flex-1 sm:flex-none'
                     ]"
                 >
                     <PhArrowDownLeft class="w-4 h-4" />
@@ -152,7 +152,7 @@ const groupedTransactions = computed(() => {
                         type === 'outbound'
                             ? 'bg-black text-white'
                             : 'bg-white text-gray-600 hover:bg-gray-50',
-                        'inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-colors border border-black/5'
+                        'inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-colors border border-black/5 flex-1 sm:flex-none'
                     ]"
                 >
                     <PhArrowUpRight class="w-4 h-4" />
@@ -160,7 +160,7 @@ const groupedTransactions = computed(() => {
                 </button>
             </div>
 
-            <div class="relative w-full md:w-80">
+            <div class="relative w-full lg:w-80">
                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <PhMagnifyingGlass class="h-5 w-5 text-gray-600" />
                 </div>
@@ -298,21 +298,21 @@ const groupedTransactions = computed(() => {
                     </table>
                 </div>
 
-                <div v-if="inbounds.links && inbounds.links.length > 3" class="px-8 py-5 border-t border-black/5 flex items-center justify-between bg-black/[0.01]">
+                <div v-if="inbounds.links && inbounds.links.length > 3" class="px-6 py-5 border-t border-black/5 flex flex-col sm:flex-row items-center justify-between gap-4 bg-black/[0.01]">
                     <p class="text-sm text-gray-600">
                         Menampilkan <span class="font-medium text-black">{{ inbounds.from }}</span> - <span class="font-medium text-black">{{ inbounds.to }}</span> dari <span class="font-medium text-black">{{ inbounds.total }}</span>
                     </p>
-                    <nav class="inline-flex rounded-full shadow-sm bg-white border border-black/10 p-1 gap-1">
+                    <nav class="inline-flex flex-wrap justify-center rounded-full shadow-sm bg-white border border-black/10 p-1 gap-1">
                         <template v-for="(link, i) in inbounds.links" :key="i">
                             <Link
                                 v-if="link.url"
                                 :href="link.url"
                                 :class="[
                                     link.active ? 'bg-terracotta-600 text-white font-semibold' : 'text-gray-600 hover:bg-black/5 hover:text-black',
-                                    'relative inline-flex items-center px-5 py-2.5 text-sm rounded-full transition-all duration-300'
+                                    'relative inline-flex items-center px-4 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm rounded-full transition-all duration-300'
                                 ]"
                             >{{ link.label }}</Link>
-                            <span v-else class="relative inline-flex items-center px-5 py-2.5 text-sm font-medium text-gray-400 cursor-not-allowed">{{ link.label }}</span>
+                            <span v-else class="relative inline-flex items-center px-4 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-medium text-gray-400 cursor-not-allowed">{{ link.label }}</span>
                         </template>
                     </nav>
                 </div>
@@ -367,21 +367,21 @@ const groupedTransactions = computed(() => {
                     </table>
                 </div>
 
-                <div v-if="outbounds.links && outbounds.links.length > 3" class="px-8 py-5 border-t border-black/5 flex items-center justify-between bg-black/[0.01]">
+                <div v-if="outbounds.links && outbounds.links.length > 3" class="px-6 py-5 border-t border-black/5 flex flex-col sm:flex-row items-center justify-between gap-4 bg-black/[0.01]">
                     <p class="text-sm text-gray-600">
                         Menampilkan <span class="font-medium text-black">{{ outbounds.from }}</span> - <span class="font-medium text-black">{{ outbounds.to }}</span> dari <span class="font-medium text-black">{{ outbounds.total }}</span>
                     </p>
-                    <nav class="inline-flex rounded-full shadow-sm bg-white border border-black/10 p-1 gap-1">
+                    <nav class="inline-flex flex-wrap justify-center rounded-full shadow-sm bg-white border border-black/10 p-1 gap-1">
                         <template v-for="(link, i) in outbounds.links" :key="i">
                             <Link
                                 v-if="link.url"
                                 :href="link.url"
                                 :class="[
                                     link.active ? 'bg-terracotta-600 text-white font-semibold' : 'text-gray-600 hover:bg-black/5 hover:text-black',
-                                    'relative inline-flex items-center px-5 py-2.5 text-sm rounded-full transition-all duration-300'
+                                    'relative inline-flex items-center px-4 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm rounded-full transition-all duration-300'
                                 ]"
                             >{{ link.label }}</Link>
-                            <span v-else class="relative inline-flex items-center px-5 py-2.5 text-sm font-medium text-gray-400 cursor-not-allowed">{{ link.label }}</span>
+                            <span v-else class="relative inline-flex items-center px-4 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-medium text-gray-400 cursor-not-allowed">{{ link.label }}</span>
                         </template>
                     </nav>
                 </div>

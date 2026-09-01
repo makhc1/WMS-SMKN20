@@ -141,109 +141,115 @@ const barOptions = computed(() => {
             Dashboard
         </template>
 
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
+        <div class="flex flex-col gap-6 md:gap-8">
             
-            <!-- Metric: Utilisasi Kapasitas -->
-            <div class="md:col-span-3 bg-white border border-black/10 rounded-[1.5rem] overflow-hidden">
-                <div class="bg-transparent p-6 h-full flex flex-col justify-between relative overflow-hidden">
-                    <div class="flex justify-between items-start mb-8 relative z-10">
-                        <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center">
-                            <PhCube class="w-5 h-5 text-emerald-600" />
+            <!-- Metrics Row -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 md:gap-8">
+                <!-- Metric: Utilisasi Kapasitas -->
+                <div class="bg-white border border-black/10 rounded-[1.5rem] overflow-hidden">
+                    <div class="bg-transparent p-6 h-full flex flex-col justify-between relative overflow-hidden">
+                        <div class="flex justify-between items-start mb-8 relative z-10">
+                            <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center">
+                                <PhCube class="w-5 h-5 text-emerald-600" />
+                            </div>
+                        </div>
+                        <div class="relative z-10">
+                            <div class="flex items-end gap-2">
+                                <h2 class="text-4xl lg:text-5xl font-bold tracking-tighter text-black">{{ stats?.capacity_utilization || 0 }}<span class="text-2xl lg:text-3xl text-gray-400">%</span></h2>
+                            </div>
+                            <p class="text-xs font-bold text-gray-600 uppercase tracking-widest mt-2">Kapasitas Terpakai</p>
+                            <p class="text-[10px] text-gray-400 font-medium mt-1">{{ stats?.total_stock }} / 10.000 Unit</p>
                         </div>
                     </div>
-                    <div class="relative z-10">
-                        <div class="flex items-end gap-2">
-                            <h2 class="text-5xl font-bold tracking-tighter text-black">{{ stats?.capacity_utilization || 0 }}<span class="text-3xl text-gray-400">%</span></h2>
+                </div>
+
+                <!-- Metric: Inbound Today -->
+                <div class="bg-white border border-black/10 rounded-[1.5rem] overflow-hidden">
+                    <div class="bg-transparent p-6 h-full flex flex-col justify-between">
+                        <div class="flex justify-between items-start mb-8">
+                            <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center">
+                                <PhArrowDownLeft class="w-5 h-5 text-indigo-600" />
+                            </div>
                         </div>
-                        <p class="text-xs font-bold text-gray-600 uppercase tracking-widest mt-2">Kapasitas Terpakai</p>
-                        <p class="text-[10px] text-gray-400 font-medium mt-1">{{ stats?.total_stock }} / 10.000 Unit</p>
+                        <div>
+                            <h2 class="text-4xl lg:text-5xl font-bold tracking-tighter text-black">{{ stats?.inbound_today || 0 }}</h2>
+                            <p class="text-xs font-bold text-gray-600 uppercase tracking-widest mt-2">Inbound Hari Ini</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Metric: Outbound Today -->
+                <div class="bg-white border border-black/10 rounded-[1.5rem] overflow-hidden">
+                    <div class="bg-transparent p-6 h-full flex flex-col justify-between">
+                        <div class="flex justify-between items-start mb-8">
+                            <div class="w-10 h-10 rounded-full bg-terracotta-50 flex items-center justify-center">
+                                <PhArrowUpRight class="w-5 h-5 text-terracotta-600" />
+                            </div>
+                        </div>
+                        <div>
+                            <h2 class="text-4xl lg:text-5xl font-bold tracking-tighter text-black">{{ stats?.outbound_today || 0 }}</h2>
+                            <p class="text-xs font-bold text-gray-600 uppercase tracking-widest mt-2">Outbound Hari Ini</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Metric: Menunggu Diproses -->
+                <div class="bg-white border border-black/10 rounded-[1.5rem] overflow-hidden">
+                    <div :class="[
+                        'rounded-[1.625rem] p-6 h-full flex flex-col justify-between transition-colors duration-500',
+                        (stats?.pending_tasks > 0) ? 'bg-amber-50' : 'bg-white'
+                    ]">
+                        <div class="flex justify-between items-start mb-8">
+                            <div :class="[
+                                'w-10 h-10 rounded-full flex items-center justify-center',
+                                (stats?.pending_tasks > 0) ? 'bg-amber-100' : 'bg-black/5'
+                            ]">
+                                <PhClock :class="['w-5 h-5', (stats?.pending_tasks > 0) ? 'text-amber-600 animate-pulse' : 'text-black']" />
+                            </div>
+                        </div>
+                        <div>
+                            <h2 :class="['text-4xl lg:text-5xl font-bold tracking-tighter', (stats?.pending_tasks > 0) ? 'text-amber-700' : 'text-black']">{{ stats?.pending_tasks || 0 }}</h2>
+                            <p :class="['text-[10px] font-bold uppercase tracking-widest mt-2', (stats?.pending_tasks > 0) ? 'text-amber-600/80' : 'text-gray-600']">Menunggu Diproses</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Metric: Inbound Today -->
-            <div class="md:col-span-3 bg-white border border-black/10 rounded-[1.5rem] overflow-hidden">
-                <div class="bg-transparent p-6 h-full flex flex-col justify-between">
-                    <div class="flex justify-between items-start mb-8">
-                        <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center">
-                            <PhArrowDownLeft class="w-5 h-5 text-indigo-600" />
+            <!-- Charts Row -->
+            <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 md:gap-8">
+                <!-- Chart: Line (ApexCharts) -->
+                <div class="xl:col-span-7 bg-white border border-black/10 rounded-[1.5rem] overflow-hidden">
+                    <div class="bg-transparent p-6 lg:p-8 h-[350px] lg:h-[400px] flex flex-col">
+                        <div class="mb-2">
+                            <h2 class="text-sm font-semibold tracking-tight text-black">Arus Barang (7 Hari Terakhir)</h2>
+                        </div>
+                        <div class="flex-1 w-full min-h-0 relative -ml-2">
+                            <VueApexCharts 
+                                type="area" 
+                                height="100%" 
+                                :options="areaOptions" 
+                                :series="areaSeries" 
+                            />
                         </div>
                     </div>
-                    <div>
-                        <h2 class="text-5xl font-bold tracking-tighter text-black">{{ stats?.inbound_today || 0 }}</h2>
-                        <p class="text-xs font-bold text-gray-600 uppercase tracking-widest mt-2">Inbound Hari Ini</p>
-                    </div>
                 </div>
-            </div>
 
-            <!-- Metric: Outbound Today -->
-            <div class="md:col-span-3 bg-white border border-black/10 rounded-[1.5rem] overflow-hidden">
-                <div class="bg-transparent p-6 h-full flex flex-col justify-between">
-                    <div class="flex justify-between items-start mb-8">
-                        <div class="w-10 h-10 rounded-full bg-terracotta-50 flex items-center justify-center">
-                            <PhArrowUpRight class="w-5 h-5 text-terracotta-600" />
+                <!-- Chart: Bar (ApexCharts) -->
+                <div class="xl:col-span-5 bg-white border border-black/10 rounded-[1.5rem] overflow-hidden">
+                    <div class="bg-transparent p-6 lg:p-8 h-[350px] lg:h-[400px] flex flex-col">
+                        <div class="mb-6">
+                            <h2 class="text-sm font-semibold tracking-tight text-black">Barang Paling Aktif (30 Hari)</h2>
                         </div>
-                    </div>
-                    <div>
-                        <h2 class="text-5xl font-bold tracking-tighter text-black">{{ stats?.outbound_today || 0 }}</h2>
-                        <p class="text-xs font-bold text-gray-600 uppercase tracking-widest mt-2">Outbound Hari Ini</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Metric: Menunggu Diproses -->
-            <div class="md:col-span-3 bg-white border border-black/10 rounded-[1.5rem] overflow-hidden">
-                <div :class="[
-                    'rounded-[1.625rem] p-6 h-full flex flex-col justify-between transition-colors duration-500',
-                    (stats?.pending_tasks > 0) ? 'bg-amber-50' : 'bg-white'
-                ]">
-                    <div class="flex justify-between items-start mb-8">
-                        <div :class="[
-                            'w-10 h-10 rounded-full flex items-center justify-center',
-                            (stats?.pending_tasks > 0) ? 'bg-amber-100' : 'bg-black/5'
-                        ]">
-                            <PhClock :class="['w-5 h-5', (stats?.pending_tasks > 0) ? 'text-amber-600 animate-pulse' : 'text-black']" />
+                        <div class="flex-1 min-h-0 relative">
+                            <VueApexCharts 
+                                v-if="activeItems && activeItems.length"
+                                type="bar" 
+                                height="100%" 
+                                :options="barOptions" 
+                                :series="barSeries" 
+                            />
+                            <div v-else class="flex items-center justify-center h-full text-sm text-gray-400">Belum ada aktivitas barang</div>
                         </div>
-                    </div>
-                    <div>
-                        <h2 :class="['text-5xl font-bold tracking-tighter', (stats?.pending_tasks > 0) ? 'text-amber-700' : 'text-black']">{{ stats?.pending_tasks || 0 }}</h2>
-                        <p :class="['text-[10px] font-bold uppercase tracking-widest mt-2', (stats?.pending_tasks > 0) ? 'text-amber-600/80' : 'text-gray-600']">Menunggu Diproses</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Chart: Line (ApexCharts) -->
-            <div class="md:col-span-7 bg-white border border-black/10 rounded-[1.5rem] overflow-hidden">
-                <div class="bg-transparent p-8 h-[400px] flex flex-col">
-                    <div class="mb-2">
-                        <h2 class="text-sm font-semibold tracking-tight text-black">Arus Barang (7 Hari Terakhir)</h2>
-                    </div>
-                    <div class="flex-1 w-full min-h-0 relative -ml-2">
-                        <VueApexCharts 
-                            type="area" 
-                            height="100%" 
-                            :options="areaOptions" 
-                            :series="areaSeries" 
-                        />
-                    </div>
-                </div>
-            </div>
-
-            <!-- Chart: Bar (ApexCharts) -->
-            <div class="md:col-span-5 bg-white border border-black/10 rounded-[1.5rem] overflow-hidden">
-                <div class="bg-transparent p-8 h-[400px] flex flex-col">
-                    <div class="mb-6">
-                        <h2 class="text-sm font-semibold tracking-tight text-black">Barang Paling Aktif (30 Hari)</h2>
-                    </div>
-                    <div class="flex-1 min-h-0 relative">
-                        <VueApexCharts 
-                            v-if="activeItems && activeItems.length"
-                            type="bar" 
-                            height="100%" 
-                            :options="barOptions" 
-                            :series="barSeries" 
-                        />
-                        <div v-else class="flex items-center justify-center h-full text-sm text-gray-400">Belum ada aktivitas barang</div>
                     </div>
                 </div>
             </div>
