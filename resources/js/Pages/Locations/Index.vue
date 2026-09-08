@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { PhPlus, PhPencilSimple, PhTrash, PhMagnifyingGlass, PhCaretDown, PhCaretRight, PhPackage } from '@phosphor-icons/vue';
+import { PhPlus, PhPencilSimple, PhTrash, PhMagnifyingGlass, PhCaretDown, PhCaretRight, PhPackage, PhCheck, PhX, PhMagnifyingGlassPlus } from '@phosphor-icons/vue';
 import { ref, watch } from 'vue';
 
 const props = defineProps({
@@ -13,6 +13,18 @@ const search = ref(props.filters?.search || '');
 const expandedRows = ref(new Set());
 const locationItems = ref({});
 const loadingItems = ref(new Set());
+
+// Per-location "add item" state
+const addingTo = ref(null);
+const itemSearch = ref('');
+const itemResults = ref([]);
+const selectedItem = ref(null);
+const addQuantity = ref(1);
+const savingAdd = ref(false);
+
+// Edit quantity state: { [locationId_itemId]: number }
+const editingQty = ref({});
+const savingQty = ref(new Set());
 
 // Debounce search
 let timeout = null;
@@ -49,6 +61,98 @@ const toggleRow = async (loc) => {
                 loadingItems.value.delete(loc.id);
             }
         }
+    }
+};
+
+const openAddItem = (locId) => {
+    addingTo.value = locId;
+    itemSearch.value = '';
+    itemResults.value = [];
+    selectedItem.value = null;
+    addQuantity.value = 1;
+    searchItems();
+};
+
+const closeAddItem = () => {
+    addingTo.value = null;
+    selectedItem.value = null;
+};
+
+let itemSearchTimeout = null;
+const searchItems = () => {
+    clearTimeout(itemSearchTimeout);
+    itemSearchTimeout = setTimeout(async () => {
+        try {
+            const response = await fetch(route('locations.items.all') + '?search=' + encodeURIComponent(itemSearch.value));
+            const data = await response.json();
+            itemResults.value = data.items;
+        } catch (error) {
+            console.error('Failed to search items:', error);
+            itemResults.value = [];
+        }
+    }, 200);
+};
+
+const confirmAddItem = async (loc) => {
+    if (!selectedItem.value || !addQuantity.value || addQuantity.value < 1) return;
+    savingAdd.value = true;
+    try {
+        await fetch(route('locations.items.add', loc.id), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content },
+            body: JSON.stringify({ item_id: selectedItem.value.id, quantity: addQuantity.value }),
+        });
+        // Reload items for this location
+        const response = await fetch(route('locations.items', loc.id));
+        const data = await response.json();
+        locationItems.value[loc.id] = data.items;
+        closeAddItem();
+    } catch (error) {
+        console.error('Failed to add item:', error);
+    } finally {
+        savingAdd.value = false;
+    }
+};
+
+const startEditQty = (locId, itemId, quantity) => {
+    editingQty.value[`${locId}_${itemId}`] = quantity;
+};
+
+const saveQty = async (loc, item) => {
+    const key = `${loc.id}_${item.id}`;
+    const qty = parseInt(editingQty.value[key], 10);
+    if (isNaN(qty) || qty < 0) return;
+
+    savingQty.value.add(key);
+    try {
+        await fetch(route('locations.items.update', [loc.id, item.id]), {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content },
+            body: JSON.stringify({ quantity: qty }),
+        });
+        const response = await fetch(route('locations.items', loc.id));
+        const data = await response.json();
+        locationItems.value[loc.id] = data.items;
+        delete editingQty.value[key];
+    } catch (error) {
+        console.error('Failed to update quantity:', error);
+    } finally {
+        savingQty.value.delete(key);
+    }
+};
+
+const removeItemFromLoc = async (loc, item) => {
+    if (!confirm(`Hapus "${item.name}" dari rak ini?`)) return;
+    try {
+        await fetch(route('locations.items.remove', [loc.id, item.id]), {
+            method: 'DELETE',
+            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content },
+        });
+        const response = await fetch(route('locations.items', loc.id));
+        const data = await response.json();
+        locationItems.value[loc.id] = data.items;
+    } catch (error) {
+        console.error('Failed to remove item:', error);
     }
 };
 </script>
@@ -136,6 +240,10 @@ const toggleRow = async (loc) => {
                                     </td>
                                     <td class="px-6 py-5 text-right">
                                         <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300" @click.stop>
+                                            <button @click="toggleRow(loc); openAddItem(loc.id)" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-terracotta-600 hover:bg-terracotta-50 rounded-full transition-colors duration-300" title="Tambah barang ke rak ini">
+                                                <PhPlus class="w-4 h-4" weight="bold" />
+                                                Barang
+                                            </button>
                                             <Link :href="route('locations.edit', loc.id)" class="p-2 text-gray-600 hover:text-black hover:bg-black/5 rounded-full transition-colors duration-300" aria-label="Edit">
                                                 <PhPencilSimple class="w-4 h-4" />
                                             </Link>
@@ -150,8 +258,82 @@ const toggleRow = async (loc) => {
                                 <tr v-if="expandedRows.has(loc.id)">
                                     <td colspan="8" class="px-6 py-4 bg-gray-50">
                                         <div class="ml-8">
-                                            <h4 class="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3">Isi Rak</h4>
-                                            
+                                            <div class="flex items-center justify-between mb-3">
+                                                <h4 class="text-xs font-bold text-gray-600 uppercase tracking-wider">Isi Rak</h4>
+                                                <button
+                                                    type="button"
+                                                    @click="openAddItem(loc.id)"
+                                                    class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-black hover:bg-gray-800 rounded-full transition-all active:scale-95"
+                                                >
+                                                    <PhPlus class="w-3.5 h-3.5" weight="bold" />
+                                                    Tambah Barang ke Rak
+                                                </button>
+                                            </div>
+
+                                            <!-- Add Item Panel -->
+                                            <div v-if="addingTo === loc.id" class="mb-4 p-4 bg-white rounded-2xl border border-black/10">
+                                                <div class="relative mb-3">
+                                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                        <PhMagnifyingGlass class="h-4 w-4 text-gray-400" />
+                                                    </div>
+                                                    <input
+                                                        v-model="itemSearch"
+                                                        @input="searchItems"
+                                                        type="text"
+                                                        placeholder="Cari barang berdasarkan nama / SKU..."
+                                                        class="w-full pl-10 pr-4 py-2.5 border border-black/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                                                    />
+                                                </div>
+
+                                                <div class="max-h-44 overflow-y-auto space-y-1 mb-3">
+                                                    <button
+                                                        v-for="it in itemResults"
+                                                        :key="it.id"
+                                                        type="button"
+                                                        @click="selectedItem = it"
+                                                        :class="[
+                                                            'w-full flex items-center justify-between px-3 py-2 rounded-lg text-left text-sm transition-colors',
+                                                            selectedItem?.id === it.id ? 'bg-terracotta-50 border border-terracotta-300 text-terracotta-700' : 'hover:bg-gray-50 border border-transparent'
+                                                        ]"
+                                                    >
+                                                        <span class="font-medium text-black">{{ it.name }}</span>
+                                                        <span class="text-xs text-gray-500 font-mono">{{ it.sku }} · Stok: {{ it.quantity }}</span>
+                                                    </button>
+                                                    <p v-if="itemResults.length === 0" class="text-xs text-gray-400 text-center py-3">Tidak ada barang ditemukan</p>
+                                                </div>
+
+                                                <div v-if="selectedItem" class="flex items-center gap-3">
+                                                    <div class="flex-1">
+                                                        <label class="block text-xs font-semibold text-gray-700 mb-1">Jumlah ditaruh di rak</label>
+                                                        <input
+                                                            v-model="addQuantity"
+                                                            type="number"
+                                                            min="1"
+                                                            class="w-full px-3 py-2 border border-black/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                                                        />
+                                                    </div>
+                                                    <div class="flex items-end gap-2">
+                                                        <button
+                                                            type="button"
+                                                            @click="confirmAddItem(loc)"
+                                                            :disabled="savingAdd"
+                                                            class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-terracotta-600 hover:bg-terracotta-700 rounded-full transition-all disabled:opacity-50"
+                                                        >
+                                                            <PhCheck class="w-3.5 h-3.5" weight="bold" />
+                                                            {{ savingAdd ? 'Menyimpan...' : 'Tambah' }}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            @click="closeAddItem"
+                                                            class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-full transition-all"
+                                                        >
+                                                            <PhX class="w-3.5 h-3.5" />
+                                                            Batal
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                             <!-- Loading State -->
                                             <div v-if="loadingItems.has(loc.id)" class="text-center py-4">
                                                 <p class="text-xs text-gray-500">Memuat data barang...</p>
@@ -160,7 +342,7 @@ const toggleRow = async (loc) => {
                                             <!-- Empty State -->
                                             <div v-else-if="!locationItems[loc.id] || locationItems[loc.id].length === 0" class="text-center py-4">
                                                 <PhPackage class="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                                                <p class="text-xs text-gray-500">Belum ada barang di rak ini</p>
+                                                <p class="text-xs text-gray-500">Belum ada barang di rak ini. Klik "Tambah Barang ke Rak" untuk mengisinya.</p>
                                             </div>
 
                                             <!-- Items List -->
@@ -176,9 +358,34 @@ const toggleRow = async (loc) => {
                                                             <p class="text-xs text-gray-500 font-mono">{{ item.sku }}</p>
                                                         </div>
                                                     </div>
-                                                    <div class="text-right">
-                                                        <p class="text-sm font-bold text-black">{{ item.pivot.quantity }} {{ item.unit || 'Pcs' }}</p>
-                                                        <p class="text-xs text-gray-500">{{ item.category }}</p>
+                                                    <div class="flex items-center gap-4">
+                                                        <!-- Quantity editor -->
+                                                        <div v-if="editingQty[loc.id + '_' + item.id] !== undefined" class="flex items-center gap-2">
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                v-model="editingQty[loc.id + '_' + item.id]"
+                                                                class="w-24 px-3 py-1.5 border border-black/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black text-right"
+                                                            />
+                                                            <button @click="saveQty(loc, item)" :disabled="savingQty.has(loc.id + '_' + item.id)" class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Simpan">
+                                                                <PhCheck class="w-4 h-4" weight="bold" />
+                                                            </button>
+                                                            <button @click="delete editingQty[loc.id + '_' + item.id]" class="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors" title="Batal">
+                                                                <PhX class="w-4 h-4" weight="bold" />
+                                                            </button>
+                                                        </div>
+                                                        <!-- Display + edit trigger -->
+                                                        <div v-else class="flex items-center gap-2">
+                                                            <span class="text-sm font-bold text-black text-right">
+                                                                {{ item.pivot.quantity }} {{ item.unit || 'Pcs' }}
+                                                            </span>
+                                                            <button @click="startEditQty(loc.id, item.id, item.pivot.quantity)" class="p-1.5 text-gray-400 hover:text-black hover:bg-gray-100 rounded-lg transition-colors" title="Edit jumlah">
+                                                                <PhPencilSimple class="w-4 h-4" />
+                                                            </button>
+                                                            <button @click="removeItemFromLoc(loc, item)" class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Keluarkan dari rak">
+                                                                <PhTrash class="w-4 h-4" />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>

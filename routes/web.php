@@ -125,7 +125,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/reports/mutations/pdf', [\App\Http\Controllers\ReportController::class, 'exportMutations'])->name('reports.mutations.pdf');
         
         Route::resource('locations', \App\Http\Controllers\LocationController::class);
+        Route::get('locations/items/all', [\App\Http\Controllers\LocationController::class, 'allItems'])->name('locations.items.all');
         Route::get('locations/{id}/items', [\App\Http\Controllers\LocationController::class, 'items'])->name('locations.items');
+        Route::post('locations/{id}/items', [\App\Http\Controllers\LocationController::class, 'addItem'])->name('locations.items.add');
+        Route::patch('locations/{id}/items/{itemId}', [\App\Http\Controllers\LocationController::class, 'updateItemQuantity'])->name('locations.items.update');
+        Route::delete('locations/{id}/items/{itemId}', [\App\Http\Controllers\LocationController::class, 'removeItem'])->name('locations.items.remove');
     });
 
     Route::middleware('role:Warehouse Manager')->group(function () {

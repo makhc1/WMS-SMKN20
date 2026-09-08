@@ -1,3 +1,4 @@
+
 # Warehouse Management System - SMKN 20 Jakarta
 
 Sistem Manajemen Gudang (Warehouse Management System) berbasis web untuk SMKN 20 Jakarta. Aplikasi ini dirancang untuk mengelola inventaris barang, mencatat transaksi barang masuk dan keluar, memantau stok secara real-time, serta menghasilkan laporan operasional gudang dalam format PDF.
